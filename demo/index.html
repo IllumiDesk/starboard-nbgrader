@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Starboard-based nbgrader demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <style>
+        body, html {
+            position: relative;
+            background-color: #fcfcfc;
+            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+            margin: 0;
+            padding: 0;
+            max-width: 100vw;
+            overflow: auto;
+        }
+
+        .preview {
+            flex-basis: auto;
+            width: 48%;
+            margin-right: 0.25em;
+            overflow: hidden;
+        }
+
+    </style>
+</head>
+
+<body style="background-color: #fcfcfc; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji; margin: 0;">
+    <script type="module" src="demo.js"></script>
+
+    <section style="margin: 1em">
+        <h4>Load .ipynb file</h4>
+        <input type="file" id="file-selector">
+
+        <div style="display: flex; max-width: 100%; max-height: 320px">
+            <div class="preview">
+                <h4>Current Starboard content</h4>
+                <pre id="sb-notebook-content-display" style="background-color: #eee; padding: 1em;"></pre>
+            </div>
+
+            <div class="preview">
+                <h4>Current Jupyter content</h4>
+                <pre id="ipynb-notebook-content-display" style="background-color: #eee; padding: 1em;"></pre>
+            </div>
+        </div>
+    </section>
+
+    <iframe
+        title="Starboard Notebook Sandbox iFrame"
+        id="notebook-iframe"
+        src="https://unpkg.com/starboard-notebook@0.7.9/dist/index.html"
+        sandbox="allow-scripts allow-modals allow-same-origin allow-pointer-lock allow-top-navigation-by-user-activation allow-forms allow-downloads"
+        frameborder="0"
+        style="width: 100%"
+    ></iframe>
+</body>
+</html>
