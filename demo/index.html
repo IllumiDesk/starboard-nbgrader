@@ -21,7 +21,13 @@
             flex-basis: auto;
             width: 48%;
             margin-right: 0.25em;
-            overflow: hidden;
+        }
+
+        .preview pre {
+            background-color: #f4f4f4;
+            overflow: auto;
+            margin: 1em;
+            max-height: 320px;
         }
 
     </style>
@@ -34,15 +40,15 @@
         <h4>Load .ipynb file</h4>
         <input type="file" id="file-selector">
 
-        <div style="display: flex; max-width: 100%; max-height: 320px">
+        <div style="display: flex; max-width: 100%">
             <div class="preview">
                 <h4>Current Starboard content</h4>
-                <pre id="sb-notebook-content-display" style="background-color: #eee; padding: 1em;"></pre>
+                <pre id="sb-notebook-content-display"></pre>
             </div>
 
             <div class="preview">
                 <h4>Current Jupyter content</h4>
-                <pre id="ipynb-notebook-content-display" style="background-color: #eee; padding: 1em;"></pre>
+                <pre id="ipynb-notebook-content-display"></pre>
             </div>
         </div>
     </section>
