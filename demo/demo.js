@@ -4,13 +4,9 @@ import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap";
 let currentStarboardNotebookContent = ``;
 let currentJupyterNotebookContent = ``;
 
-function prettifyJson(j) {
-    return JSON.stringify(JSON.parse(j), null, 2);
-}
-
 function updateContent(content) {
     document.querySelector("#sb-notebook-content-display").innerText = content;
-    currentJupyterNotebookContent = prettifyJson(convertStarboardStringToJupyterString(content));
+    currentJupyterNotebookContent = convertStarboardStringToJupyterString(content);
 
     document.querySelector("#ipynb-notebook-content-display").innerText = currentJupyterNotebookContent;
 }
@@ -46,7 +42,7 @@ function createNotebook(content) {
         },
 
         onContentUpdateMessage(payload) {
-            updateContent(payload);
+            updateContent(payload.content);
         }
     });
     el.style.width = "100%";
