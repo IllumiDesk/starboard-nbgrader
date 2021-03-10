@@ -1,12 +1,20 @@
 import {convertJupyterStringToStarboardString, convertStarboardStringToJupyterString} from "https://cdn.skypack.dev/jupystar";
 import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap";
+import {upgradeNBGraderCells, preprocessGraderCellsForJupystar} from "http://localhost:8080/dist/converter.js";
 
-let currentStarboardNotebookContent = ``;
+let currentStarboardNotebookContent = `
+# %%--- [javascript]
+# properties:
+#   run_on_load: true
+# ---%%
+const {initPlugin} = await import("http://localhost:8080/dist/index.js");
+initPlugin();
+`;
 let currentJupyterNotebookContent = ``;
 
 function updateContent(content) {
     document.querySelector("#sb-notebook-content-display").innerText = content;
-    currentJupyterNotebookContent = convertStarboardStringToJupyterString(content);
+    currentJupyterNotebookContent = convertStarboardStringToJupyterString(preprocessGraderCellsForJupystar(content));
 
     document.querySelector("#ipynb-notebook-content-display").innerText = currentJupyterNotebookContent;
 }
@@ -53,9 +61,15 @@ const fileSelector = document.getElementById('file-selector');
 fileSelector.addEventListener('change', async (event) => {
     const text = await readFileAsText(event.target.files[0]);
 
-    currentStarboardNotebookContent = convertJupyterStringToStarboardString(text);
+    currentStarboardNotebookContent = upgradeNBGraderCells(convertJupyterStringToStarboardString(text));
     currentJupyterNotebookContent = text;
     updateContent(currentStarboardNotebookContent);
 
     createNotebook(currentStarboardNotebookContent)
 });
+
+
+if (currentStarboardNotebookContent !== "") {
+    createNotebook(currentStarboardNotebookContent);
+    updateContent(currentStarboardNotebookContent);
+}
