@@ -5,6 +5,7 @@ export interface NBGraderMetadata {
     schema_version: 3,
     solution: boolean,
     task: boolean
+    points?: number;
 }
 
 export interface StarboardGraderMetadata {

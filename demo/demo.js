@@ -1,6 +1,6 @@
 import {convertJupyterStringToStarboardString, convertStarboardStringToJupyterString} from "https://cdn.skypack.dev/jupystar";
 import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap";
-import {upgradeNBGraderCells, preprocessGraderCellsForJupystar} from "http://localhost:8080/dist/converter.js";
+import {upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell} from "http://localhost:8080/dist/converter.js";
 
 let currentStarboardNotebookContent = `
 # %%--- [javascript]
@@ -9,13 +9,15 @@ let currentStarboardNotebookContent = `
 # ---%%
 const {initPlugin} = await import("http://localhost:8080/dist/index.js");
 initPlugin();
+
+# %% [grader]
+Hello!
 `;
 let currentJupyterNotebookContent = ``;
 
 function updateContent(content) {
     document.querySelector("#sb-notebook-content-display").innerText = content;
     currentJupyterNotebookContent = convertStarboardStringToJupyterString(preprocessGraderCellsForJupystar(content));
-
     document.querySelector("#ipynb-notebook-content-display").innerText = currentJupyterNotebookContent;
 }
 
@@ -42,7 +44,9 @@ function createNotebook(content) {
     }
 
     const el = new StarboardNotebookIFrame({
-        notebookContent: content,
+        // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
+        // have a clean way to load plugins at runtime level yet, coming soon!
+        notebookContent: prependPluginLoaderCell(content),
         src: "https://unpkg.com/starboard-notebook@0.7.14/dist/index.html",
 
         onSaveMessage(payload) {

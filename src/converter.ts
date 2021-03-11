@@ -1,7 +1,7 @@
 import { NotebookContent } from "starboard-notebook/dist/src/runtime";
 import { textToNotebookContent } from "starboard-notebook/dist/src/content/parsing"
 import { notebookContentToText } from "starboard-notebook/dist/src/content/serialization"
-import { StarboardGraderMetadata } from "./types";
+import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 
 /**
  * Transforms given notebook content, replacing python and markdown cells that have nbgrader metadata with a special grader cell type.
@@ -20,14 +20,36 @@ export function upgradeNBGraderCells(nb: NotebookContent | string) {
     }
 
     nb.cells.forEach(c => {
-        // TODO fix cell metadata type in starboard-notebook to allow for unknown extra fields.
-        if ((c.metadata as any).nbgrader) {
-            ((c.metadata as any).starboard_grader as StarboardGraderMetadata) = {original_cell_type: c.cellType as "markdown" | "python"};
-            c.cellType = "grader";
+        const md = c.metadata.nbgrader as NBGraderMetadata;
+        if (md) {
+            if (!md.grade && md.locked && !md.task && !md.solution) {
+                // This cell is only "locked", it is not a "task" per say.
+                c.metadata.properties.nbgrader_locked = true;
+            }
+            else {
+                (c.metadata.starboard_grader as StarboardGraderMetadata) = {original_cell_type: c.cellType as "markdown" | "python"};
+                c.cellType = "grader";
+            }
         }
     });
 
     return notebookContentToText(nb);
+}
+
+export function prependPluginLoaderCell(nb: string) {
+    const content = textToNotebookContent(nb);
+
+    content.cells = [
+        {
+            cellType: "javascript",
+            metadata: {properties:{run_on_load: true}},
+            id: "nbgrader-init-cell",
+            textContent: `const {initPlugin} = await import("http://localhost:8080/dist/index.js");
+initPlugin();
+console.log("NBGrader plugin loaded")`
+        }, ...content.cells]
+
+    return notebookContentToText(content);
 }
 
 /**
@@ -50,8 +72,20 @@ export function preprocessGraderCellsForJupystar(nb: NotebookContent | string) {
 
     nb.cells.forEach(c => {
         if (c.cellType === "grader") {
-            c.cellType = ((c.metadata as any).starboard_grader as StarboardGraderMetadata).original_cell_type;
+            const md = c.metadata.starboard_grader as StarboardGraderMetadata | undefined;
+
+            c.cellType = md === undefined ? "python" : md.original_cell_type;
             delete (c.metadata as any).starboard_grader;
+        } else if (c.metadata.properties.nbgrader_locked) {
+            const md: NBGraderMetadata = {
+                locked: true,
+                grade_id: c.id,
+                grade: false,
+                solution: false,
+                schema_version: 3,
+                task: false,
+            }
+            c.metadata.nbgrader = md;
         }
     });
 
