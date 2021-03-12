@@ -42,11 +42,12 @@ export function prependPluginLoaderCell(nb: string) {
     content.cells = [
         {
             cellType: "javascript",
-            metadata: {properties:{run_on_load: true}},
+            metadata: {id: "nbgrader-init-cell", properties:{run_on_load: true}},
             id: "nbgrader-init-cell",
             textContent: `const {initPlugin} = await import("http://localhost:8080/dist/index.js");
 initPlugin();
-console.log("NBGrader plugin loaded")`
+runtime.controls.removeCell("nbgrader-init-cell");
+`
         }, ...content.cells]
 
     return notebookContentToText(content);

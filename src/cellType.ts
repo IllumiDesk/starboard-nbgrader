@@ -6,6 +6,7 @@ import {StarboardTextEditor} from "starboard-notebook/dist/src/components/textEd
 import { ConsoleOutputElement } from "starboard-notebook/dist/src/components/output/consoleOutput";
 import { NBGraderMetadata } from "./types";
 import { TemplateResult } from "lit-html";
+import { graderMetadataToNBGraderCellType } from "./graderUtils";
 
 declare const runtime: Runtime
 
@@ -27,7 +28,7 @@ const GRADER_CELL_TYPE_DEFINITION = {
     createHandler: (cell: Cell, runtime: Runtime) => new GraderCellHandler(cell, runtime),
 }
 
-type NBGraderCellType = "manual-answer" | "manual-task" | "autograder-answer" | "autograder-tests";
+export type NBGraderCellType = "manual-answer" | "manual-task" | "autograder-answer" | "autograder-tests";
 
 const NBGraderCellTypeDescriptions: Record<NBGraderCellType, TemplateResult> = {
     "manual-answer": html`
@@ -42,36 +43,13 @@ const NBGraderCellTypeDescriptions: Record<NBGraderCellType, TemplateResult> = {
       </p>`,
     "autograder-answer": html`
     <p>
-        TODO
+        Description TODO
     </p>`,
     "autograder-tests": html`
     <p>
-        TODO
+        Description TODO
     </p>`
 }
-
-
-function graderMetadataToNBGraderCellType(m: NBGraderMetadata | undefined): NBGraderCellType {
-    if (m === undefined) { // Default
-        return "manual-answer";
-    }
-    if (m.points === undefined) {
-        return "manual-answer";
-    }
-
-    if (m.grade && m.solution && !m.task) {
-        return "manual-answer";
-    } else if (!m.grade && !m.solution && m.task) {
-        return "manual-task";
-    } else if (!m.grade && m.solution && !m.task) {
-        return "autograder-answer"
-    } else if (m.grade && !m.solution && !m.task) {
-        return "autograder-tests";
-    }
-    console.error("Possibly invalid nbgrader cell metadata:", m);
-    return "manual-answer";
-}
-
 
 export class GraderCellHandler implements CellHandler {
     cell: Cell;
@@ -99,6 +77,7 @@ export class GraderCellHandler implements CellHandler {
             }
             this.cell.metadata.nbgrader = md;
         }
+        this.nbgraderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
     }
 
     private getNBGraderMetadata() {
@@ -107,9 +86,24 @@ export class GraderCellHandler implements CellHandler {
 
     private changeNBType(newType: NBGraderCellType) {
         this.nbgraderType = newType;
+        const md = this.getNBGraderMetadata();
 
         if (newType === "manual-answer") {
-            
+            md.grade = md.solution = true;
+            md.task = md.locked = false;
+            md.points = md.points || 1;
+        } else if (newType === "manual-task") {
+            md.grade = md.solution = false;
+            md.task = md.locked = true;
+            md.points = md.points || 1;
+        } else if (newType === "autograder-answer") {
+            md.grade = md.task = md.locked = false;
+            md.solution = true;
+            delete md.points;
+        } else if (newType === "autograder-tests") {
+            md.grade = md.locked = true;
+            md.solution = md.task = false;
+            md.points = md.points || 1;
         }
 
         const topElement = this.elements.topElement;
@@ -117,9 +111,8 @@ export class GraderCellHandler implements CellHandler {
     }
 
     topbarTemplate() {
-        const meta = this.getNBGraderMetadata();
+        const md = this.getNBGraderMetadata();
         
-
         let body = html`
 
             <button class="${this.nbgraderType === "manual-answer" ? "selected":""}" @click=${()=>this.changeNBType("manual-answer")}>Graded answer cell</button>
@@ -134,19 +127,18 @@ export class GraderCellHandler implements CellHandler {
             ${this.nbgraderType !== "autograder-answer" ?
                 html`
                 <small><label for="points">Point value</label></small>
-                <br><input id="points" name="points" type="number" min="0" max="1000000" placeholder="Points (in numbers)" value="1">`
+                <br><input id="points" name="points" type="number" min="0" max="1000000" placeholder="Points (number>=1)" value="${md.points}">`
                 : undefined
             }
-            <br><small><label for="grader-id">Cell ID (optional, advanced)</label></small>
-                <br><input id="grader-id" name="grader-id" type="text" min="1" max="128" placeholder="Alphanumerical unique ID" value="${this.getNBGraderMetadata()?.grade_id || this.cell.id}">
+                <br><small><label for="grader-id">Cell ID (optional, advanced)</label></small>
+                <br><input name="grader-id" type="text" min="1" max="128" placeholder="Alphanumerical unique ID" value="${md.grade_id || this.cell.id}">
             `
-
         return html`
         <style>
 
             .grader-cell {
                 border: 1px solid #3786cc;
-                background-color: #ddecff;
+                background-color: #eaf5ff;
                 padding: 0.8em;
                 border-radius: 6px;
             }
@@ -195,10 +187,8 @@ export class GraderCellHandler implements CellHandler {
                 border-top: 1px transparent solid;
                 display: flex;
                 justify-content: center;
+                padding: 4px;
             }
-
-
-
         </style>
         <div class="grader-cell grader-cell-top-bar">
             ${body}
@@ -206,15 +196,13 @@ export class GraderCellHandler implements CellHandler {
         <div>
             ${this.editor}
         </div>
-        <div class="grader-cell grader-cell-bottom-bar">
-        </div>
+        <div class="grader-cell grader-cell-bottom-bar"></div>
         `
     }
 
     attach(params: CellHandlerAttachParameters) {
         this.elements = params.elements;
-
-        this.editor = new StarboardTextEditorConstructor(this.cell, this.runtime, {language: "python"}) as any;
+        this.editor = new StarboardTextEditorConstructor(this.cell, this.runtime, {language: this.cell.metadata.starboard_grader?.original_cell_type || "plaintext"}) as any;
 
         const topElement = this.elements.topElement;
         lithtml.render(this.topbarTemplate(), topElement);
