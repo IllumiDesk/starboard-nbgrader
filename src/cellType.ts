@@ -72,7 +72,7 @@ export class GraderCellHandler implements CellHandler {
                 points: 1,
                 task: false,
                 grade_id: this.cell.id,
-                locked: true,
+                locked: false,
                 schema_version: 3,
             }
             this.cell.metadata.nbgrader = md;
