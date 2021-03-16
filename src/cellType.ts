@@ -18,7 +18,6 @@ const lithtml = runtime.exports.libraries.LitHtml;
 const html = lithtml.html;
 
 const StarboardTextEditorConstructor = runtime.exports.elements.StarboardTextEditor;
-const ConsoleOutputElementConstructor = runtime.exports.elements.ConsoleOutputElement;
 const cellControlsTemplate = runtime.exports.templates.cellControls;
 const icons = runtime.exports.templates.icons;
 
@@ -46,7 +45,7 @@ export class GraderCellHandler implements CellHandler {
 
     private markdownOutputElement: HTMLDivElement;
 
-    private graderType: GraderCellType = "manual-answer";
+    private graderType: GraderCellType;
     private underlyingCellType: "python" | "markdown";
 
     /**
@@ -123,8 +122,6 @@ export class GraderCellHandler implements CellHandler {
     private setupEditor() {
         this.editor = new StarboardTextEditorConstructor(this.cell, this.runtime, {language: this.underlyingCellType});
     }
-    
-    
 
     private changeNBType(newType: GraderCellType) {
         this.graderType = newType;
@@ -251,15 +248,6 @@ export class GraderCellHandler implements CellHandler {
                 border-bottom-right-radius: 0;
                 border-bottom: 1px transparent solid;
             }
-
-            .grader-cell-bottom-bar {
-                border-top-left-radius: 0;
-                border-top-right-radius: 0;
-                border-top: 1px transparent solid;
-                display: flex;
-                justify-content: center;
-                padding: 4px;
-            }
         </style>
         <div class="grader-cell grader-cell-top-bar">
             ${body}
@@ -268,7 +256,6 @@ export class GraderCellHandler implements CellHandler {
             ${this.editor}
         </div>
         ${this.markdownOutputElement}
-        <!-- <div class="grader-cell grader-cell-bottom-bar"></div> -->
         `
     }
 
