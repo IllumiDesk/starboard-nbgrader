@@ -28,6 +28,9 @@ export interface GraderCellTypeDefinition {
 
     supportedCellTypes: ("python" | "markdown")[],
 
+    /**
+     * Does this type of cell have points associated with it when grading?
+     */
     hasPoints: boolean,
 }
 

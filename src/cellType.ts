@@ -3,7 +3,7 @@ import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, R
 
 import {GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
-import {StarboardTextEditor} from "starboard-notebook/dist/src/components/textEditor";
+import { StarboardTextEditor } from "starboard-notebook/dist/src/components/textEditor";
 import { ConsoleOutputElement } from "starboard-notebook/dist/src/components/output/consoleOutput";
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
@@ -182,6 +182,7 @@ export class GraderCellHandler implements CellHandler {
 
     topbarTemplate() {
         const md = this.getNBGraderMetadata();
+        
         let body = html`
             <div class="btn-group btn-sm" role="group" aria-label="Grader cell type">
                 ${Object.entries(DEFINITIONS)
@@ -198,22 +199,16 @@ export class GraderCellHandler implements CellHandler {
             </div>
 
             <div class="btn-group btn-sm" role="group" style="float: right" aria-label="Cell language">
-            ${
-                DEFINITIONS[this.graderType].supportedCellTypes.map(ct => html`
+            ${DEFINITIONS[this.graderType].supportedCellTypes.map(ct => html`
                     <button
                         @click=${() => this.changeLanguage(ct)} 
                         class="btn btn-sm btn-secondary ${this.underlyingCellType === ct ? "active":""}"
                     >
                     ${ct}
-                    </button>
-            `)}
+                    </button>`)}
             </div>
 
-            <small>
-            ${DEFINITIONS[this.graderType].description}
-            </small>
-
-            
+            <small>${DEFINITIONS[this.graderType].description}</small>
             <hr>
 
             <div class="row">
@@ -252,9 +247,7 @@ export class GraderCellHandler implements CellHandler {
         <div class="grader-cell grader-cell-top-bar">
             ${body}
         </div>
-        <div>
-            ${this.editor}
-        </div>
+        <div>${this.editor}</div>
         ${this.markdownOutputElement}
         `
     }
@@ -270,7 +263,6 @@ export class GraderCellHandler implements CellHandler {
                 this.enterEditMode();
             }
         }
-
         this.updateRender();
     }
 
