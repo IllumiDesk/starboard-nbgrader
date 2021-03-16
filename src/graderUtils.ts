@@ -1,7 +1,7 @@
-import { NBGraderCellType } from "./cellType";
+import { GraderCellType } from "./definitions";
 import { NBGraderMetadata } from "./types";
 
-export function graderMetadataToNBGraderCellType(m: NBGraderMetadata | undefined): NBGraderCellType {
+export function graderMetadataToNBGraderCellType(m: NBGraderMetadata | undefined): GraderCellType {
     if (m === undefined) { // Default
         return "manual-answer";
     }

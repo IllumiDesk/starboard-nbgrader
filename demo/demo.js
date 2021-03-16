@@ -157,11 +157,24 @@ function save() {
 function readFileAsText(file) {
     return new Promise(resolve => {
         const reader = new FileReader();
-        reader.addEventListener('load', (event) => {
+        reader.addEventListener("load", (event) => {
             resolve(event.target.result);
         })
         reader.readAsText(file);
     }) 
+}
+
+function downloadIpynbAsFile() {
+    var element = document.createElement('a');
+    element.setAttribute("href", 'data:text/plain;charset=utf-8,' + encodeURIComponent(currentJupyterNotebookContent));
+    element.setAttribute('download', "starboard-grader-output.ipynb");
+  
+    element.style.display = 'none';
+    document.body.appendChild(element);
+  
+    element.click();
+  
+    document.body.removeChild(element);
 }
 
 const mount = document.querySelector("#mount-point");
@@ -176,7 +189,7 @@ function createNotebook(content) {
         // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
         // have a clean way to load plugins at runtime level yet, coming soon!
         notebookContent: prependPluginLoaderCell(content),
-        src: "https://unpkg.com/starboard-notebook@0.7.16/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.7.17/dist/index.html",
 
         onSaveMessage(payload) {
             save(payload.content);
@@ -206,3 +219,6 @@ if (currentStarboardNotebookContent !== "") {
     createNotebook(currentStarboardNotebookContent);
     updateContent(currentStarboardNotebookContent);
 }
+
+const downloadButton = document.querySelector("#download-button");
+downloadButton.addEventListener("click", () => downloadIpynbAsFile());

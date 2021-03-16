@@ -37,12 +37,15 @@
     <script type="module" src="demo.js"></script>
 
     <section style="margin: 1em">
-        <h4>Load .ipynb file</h4>
+        <h4>Load or download .ipynb file</h4>
         <input type="file" id="file-selector">
+
+        <button style="margin-left: 1em" id="download-button">Download current .ipynb</button>
 
         <div style="display: flex; max-width: 100%">
             <div class="preview">
                 <h4>Current Starboard content</h4>
+                <p></p>
                 <pre id="sb-notebook-content-display"></pre>
             </div>
 
