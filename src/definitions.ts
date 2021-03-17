@@ -1,15 +1,11 @@
 
 import { TemplateResult } from "lit-html";
 import { Runtime } from "starboard-notebook/dist/src/runtime";
+import { LitHtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+
 
 declare const runtime: Runtime
-
-// In order not to bundle the same dependencies again, we take them from the exported values which are
-// present on the global runtime variable.
-// This also prevents version incompatibilities.
-
-const lithtml = runtime.exports.libraries.LitHtml;
-const html = lithtml.html;
+declare const html: typeof LitHtml.html;
 
 export type GraderCellType = "manual-answer" | "manual-task" | "autograder-answer" | "autograder-tests";
 

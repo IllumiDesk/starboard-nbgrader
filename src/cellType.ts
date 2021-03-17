@@ -3,27 +3,18 @@ import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, R
 
 import {GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
-import { StarboardTextEditor } from "starboard-notebook/dist/src/components/textEditor";
-import { ConsoleOutputElement } from "starboard-notebook/dist/src/components/output/consoleOutput";
+import {LitHtml as lithtml, MarkdownIt as mdlib} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { StarboardTextEditor, ConsoleOutputElement } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
+import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
+import { hookMarkdownItToKaTeX, hookMarkdownItToPrismHighlighter } from "starboard-notebook/dist/src/runtime/esm/exports/core";
+
+
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit-html";
 
 declare const runtime: Runtime
-
-// In order not to bundle the same dependencies again, we take them from the exported values which are
-// present on the global runtime variable.
-// This also prevents version incompatibilities.
-const lithtml = runtime.exports.libraries.LitHtml;
-const html = lithtml.html;
-
-const StarboardTextEditorConstructor = runtime.exports.elements.StarboardTextEditor;
-const cellControlsTemplate = runtime.exports.templates.cellControls;
-const icons = runtime.exports.templates.icons;
-
-const mdlib = runtime.exports.libraries.MarkdownIt;
-const {hookMarkdownItToPrismHighlighter, hookMarkdownItToKaTeX} = runtime.exports.core;
-
+declare const html: typeof lithtml.html;
 
 const GRADER_CELL_TYPE_DEFINITION = {
     name: "Assignment (grader)",
@@ -40,8 +31,8 @@ export class GraderCellHandler implements CellHandler {
     runtime: Runtime;
 
     elements!: CellElements;
-    editor?: StarboardTextEditor;
-    outputElement!: ConsoleOutputElement;
+    editor?: InstanceType<typeof StarboardTextEditor>;
+    outputElement!: InstanceType<typeof ConsoleOutputElement>;
 
     private markdownOutputElement: HTMLDivElement;
 
@@ -120,7 +111,7 @@ export class GraderCellHandler implements CellHandler {
     }
 
     private setupEditor() {
-        this.editor = new StarboardTextEditorConstructor(this.cell, this.runtime, {language: this.underlyingCellType});
+        this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
     }
 
     private changeNBType(newType: GraderCellType) {
@@ -217,7 +208,7 @@ export class GraderCellHandler implements CellHandler {
                     html`
                     <div class="input-group input-group-sm mb-3">
                         <span class="input-group-text">Point Value</span>
-                        <input @input="${(e: any) => this.changePointValue(e)}" type="number" min="0" max="999999999999" placeholder="Points (number equal or greater than 0)" class="form-control" value="${md.points}">
+                        <input @input="${(e: any) => this.changePointValue(e)}" type="number" min="0" max="999999999999" placeholder="Points (number equal or greater than 0)" class="form-control" value="${md.points || 0}">
                     </div>`
                     : undefined
                 }
@@ -254,7 +245,7 @@ export class GraderCellHandler implements CellHandler {
 
     attach(params: CellHandlerAttachParameters) {
         this.elements = params.elements;
-        this.editor = new StarboardTextEditorConstructor(this.cell, this.runtime, {language: this.underlyingCellType});
+        this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
 
         if (this.underlyingCellType === "markdown") {
             if (this.cell.textContent !== "") {
