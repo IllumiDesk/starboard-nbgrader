@@ -44,7 +44,7 @@ export function prependPluginLoaderCell(nb: string) {
             cellType: "javascript",
             metadata: {id: "nbgrader-init-cell", properties:{run_on_load: true}},
             id: "nbgrader-init-cell",
-            textContent: `const {initPlugin} = await import("http://localhost:8080/dist/index.js");
+            textContent: `const {initPlugin} = await import("http://localhost:8080/dist/plugin.js");
 initPlugin();
 runtime.controls.removeCell("nbgrader-init-cell");
 `

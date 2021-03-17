@@ -7,7 +7,7 @@ let currentStarboardNotebookContent = `
 # properties:
 #   run_on_load: true
 # ---%%
-const {initPlugin} = await import("http://localhost:8080/dist/index.js");
+const {initPlugin} = await import("http://localhost:8080/dist/plugin.js");
 initPlugin();
 
 # %% [grader]
@@ -139,7 +139,7 @@ assert_equal(squares(3), [1, 4, 9])
 # ---%%
 from nose.tools import assert_raises
 assert_raises(ValueError, squares, 0)
-assert_raises(ValueError, squares, -1
+assert_raises(ValueError, squares, -1)
 `
 
 let currentJupyterNotebookContent = ``;
@@ -189,7 +189,7 @@ function createNotebook(content) {
         // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
         // have a clean way to load plugins at runtime level yet, coming soon!
         notebookContent: prependPluginLoaderCell(content),
-        src: "https://unpkg.com/starboard-notebook@0.7.17/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.7.19/dist/index.html",
 
         onSaveMessage(payload) {
             save(payload.content);

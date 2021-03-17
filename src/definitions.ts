@@ -2,6 +2,7 @@
 import { TemplateResult } from "lit-html";
 import { Runtime } from "starboard-notebook/dist/src/runtime";
 import { LitHtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { NBGraderMetadata } from "./types";
 
 
 declare const runtime: Runtime
@@ -72,4 +73,17 @@ export const GraderCellTypeDefinitions: Record<GraderCellType, GraderCellTypeDef
         Description TODO
     </p>`
     }
+}
+
+export function getDefaultCellMetadata(cellId: string): NBGraderMetadata {
+    const md: NBGraderMetadata = {
+        solution: true,
+        grade: true,
+        points: 1,
+        task: false,
+        grade_id: cellId,
+        locked: false,
+        schema_version: 3,
+    }
+    return md;
 }

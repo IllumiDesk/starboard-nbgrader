@@ -1,10 +1,10 @@
 import {Cell} from "starboard-notebook/dist/src/types"
 import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/runtime"
 
-import {GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
+import {getDefaultCellMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
 import {LitHtml as lithtml, MarkdownIt as mdlib} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
-import { StarboardTextEditor, ConsoleOutputElement } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
+import { StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
 import { hookMarkdownItToKaTeX, hookMarkdownItToPrismHighlighter } from "starboard-notebook/dist/src/runtime/esm/exports/core";
 
@@ -32,7 +32,6 @@ export class GraderCellHandler implements CellHandler {
 
     elements!: CellElements;
     editor?: InstanceType<typeof StarboardTextEditor>;
-    outputElement!: InstanceType<typeof ConsoleOutputElement>;
 
     private markdownOutputElement: HTMLDivElement;
 
@@ -43,26 +42,25 @@ export class GraderCellHandler implements CellHandler {
      * The editor is shown for Markdown content currently (instead of the content itself)
      */
     private isInEditMode: boolean = false;
+    private isCurrentlyRunning: boolean = false;
+    private isCurrentlyLoadingPyodide: boolean = false;
+
+    /**
+     * The last ID of a Python run. This is used for showing the right state of the "run" button if there are
+     * more than 1 overlapping runs of Python in this cell.
+     */
+    private lastRunId = -1;
 
     constructor(cell: Cell, runtime: Runtime) {
         this.cell = cell;
         this.runtime = runtime;
 
         if (this.getNBGraderMetadata() === undefined) {
-            const md: NBGraderMetadata = {
-                solution: true,
-                grade: true,
-                points: 1,
-                task: false,
-                grade_id: this.cell.id,
-                locked: false,
-                schema_version: 3,
-            }
-            this.cell.metadata.nbgrader = md;
+            
+            this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
         }
         this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
         this.markdownOutputElement = document.createElement("div");
-        this.markdownOutputElement.classList.add("mt-3", "mb-2");
 
         const starboardGraderMetadata = (this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined);
         if (!starboardGraderMetadata) {
@@ -77,24 +75,43 @@ export class GraderCellHandler implements CellHandler {
     }
 
     private getControls(): TemplateResult | string {
-        let editOrRunButton: ControlButton;
-        if (this.underlyingCellType === "python") return html``;
-
-        if (this.isInEditMode) {
-            editOrRunButton = {
-                icon: icons.PlayCircleIcon,
-                tooltip: "Render as HTML",
+        if (this.underlyingCellType === "python") {
+            const icon = this.isCurrentlyRunning ? icons.ClockIcon : icons.PlayCircleIcon;
+            const tooltip = this.isCurrentlyRunning ? "Run Cell": "Cell is running";
+            const runButton: ControlButton = {
+                icon,
+                tooltip,
                 callback: () => this.runtime.controls.emit({id: this.cell.id, type: "RUN_CELL"}),
             };
+            let buttons = [runButton];
+
+            if (this.isCurrentlyLoadingPyodide) {
+                buttons = [{
+                    icon: icons.GearsIcon,
+                    tooltip: "Downloading and initializing Pyodide",
+                    callback: () => {alert("Loading Python runtime. It's fairly large so it may take some time. It will be cached for next time.")}
+                }, ...buttons]
+            }
+
+            return cellControlsTemplate({ buttons });
         } else {
-            editOrRunButton = {
-                icon: icons.TextEditIcon,
-                tooltip: "Edit Markdown",
-                callback: () => this.enterEditMode(),
-            };
+            let editOrRunButton: ControlButton;
+            if (this.isInEditMode) {
+                editOrRunButton = {
+                    icon: icons.PlayCircleIcon,
+                    tooltip: "Render as HTML",
+                    callback: () => this.runtime.controls.emit({id: this.cell.id, type: "RUN_CELL"}),
+                };
+            } else {
+                editOrRunButton = {
+                    icon: icons.TextEditIcon,
+                    tooltip: "Edit Markdown",
+                    callback: () => this.enterEditMode(),
+                };
+            }
+            
+            return cellControlsTemplate({ buttons: [editOrRunButton] });
         }
-        
-        return cellControlsTemplate({ buttons: [editOrRunButton] });
     }
 
     private updateRender() {
@@ -268,7 +285,7 @@ export class GraderCellHandler implements CellHandler {
             }
 
             const outDiv = document.createElement("div");
-            outDiv.classList.add("markdown-body");
+            outDiv.classList.add("markdown-body", "mt-3", "mb-1");
             outDiv.innerHTML = md.render(this.cell.textContent);
 
             await katexHookPromise;
@@ -279,8 +296,29 @@ export class GraderCellHandler implements CellHandler {
             this.markdownOutputElement.children[0].addEventListener("dblclick", (_event: any) => this.enterEditMode());
             this.isInEditMode = false;
             this.updateRender();
-        } else {
+        } else if (this.underlyingCellType === "python"){
+
+            const pythonPlugin = await this.runtime.exports.libraries.async.StarboardPython();
             this.markdownOutputElement.innerHTML = "";
+
+            const codeToRun = this.cell.textContent;
+
+            this.lastRunId++;
+            const currentRunId = this.lastRunId;
+            this.isCurrentlyRunning = true;
+
+            if (pythonPlugin.getPyodideLoadingStatus() !== "ready") {
+                this.isCurrentlyLoadingPyodide = true;
+                lithtml.render(this.getControls(), this.elements.topControlsElement);
+            }
+            const val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, this.elements.bottomElement);
+            this.isCurrentlyLoadingPyodide = false;
+            if (this.lastRunId === currentRunId) {
+                this.isCurrentlyRunning = false;
+                lithtml.render(this.getControls(), this.elements.topControlsElement);
+            }
+
+            return val;
         }
     }
 
@@ -296,3 +334,7 @@ export class GraderCellHandler implements CellHandler {
 export function registerGraderCellType() {
     runtime.definitions.cellTypes.register(GRADER_CELL_TYPE_DEFINITION.cellType, GRADER_CELL_TYPE_DEFINITION);
 }
+function getDefaultCellNBGraderMetadata(id: string): any {
+    throw new Error("Function not implemented.");
+}
+
