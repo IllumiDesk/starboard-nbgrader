@@ -1,0 +1,11 @@
+.grader-cell {
+    border: 1px solid #999;
+    background-color: #fafafa;
+    padding: 0.8em;
+    border-radius: 6px;
+}
+.grader-cell-top-bar {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 1px transparent solid;
+}

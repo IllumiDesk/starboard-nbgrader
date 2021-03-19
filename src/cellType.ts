@@ -1,7 +1,7 @@
 import {Cell} from "starboard-notebook/dist/src/types"
 import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/runtime"
 
-import {getDefaultCellMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
+import {GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
 import {LitHtml as lithtml, MarkdownIt as mdlib} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
@@ -136,7 +136,6 @@ export class GraderCellHandler implements CellHandler {
         const md = this.getNBGraderMetadata();
 
         // TODO refactor this logic into a different file/routine
-
         if (newType === "manual-answer") {
             md.grade = md.solution = true;
             md.task = md.locked = false;
@@ -239,19 +238,6 @@ export class GraderCellHandler implements CellHandler {
             </div>
             `
         return html`
-        <style>
-            .grader-cell {
-                border: 1px solid #999;
-                background-color: #fafafa;
-                padding: 0.8em;
-                border-radius: 6px;
-            }
-            .grader-cell-top-bar {
-                border-bottom-left-radius: 0;
-                border-bottom-right-radius: 0;
-                border-bottom: 1px transparent solid;
-            }
-        </style>
         <div class="grader-cell grader-cell-top-bar">
             ${body}
         </div>
