@@ -3,10 +3,9 @@ import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, R
 
 import {GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
-import {LitHtml as lithtml, MarkdownIt as mdlib} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
-import { StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
+import {LitHtml as lithtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
-import { hookMarkdownItToKaTeX, hookMarkdownItToPrismHighlighter } from "starboard-notebook/dist/src/runtime/esm/exports/core";
 
 
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
@@ -22,18 +21,12 @@ const GRADER_CELL_TYPE_DEFINITION = {
     createHandler: (cell: Cell, runtime: Runtime) => new GraderCellHandler(cell, runtime),
 }
 
-const md = new mdlib({html: true});
-hookMarkdownItToPrismHighlighter(md);
-const katexHookPromise = hookMarkdownItToKaTeX(md);
-
 export class GraderCellHandler implements CellHandler {
     cell: Cell;
     runtime: Runtime;
 
     elements!: CellElements;
-    editor?: InstanceType<typeof StarboardTextEditor>;
-
-    private markdownOutputElement: HTMLDivElement;
+    editor?: InstanceType<typeof StarboardTextEditor> | InstanceType<typeof StarboardContentEditor>;
 
     private graderType: GraderCellType;
     private underlyingCellType: "python" | "markdown";
@@ -41,7 +34,6 @@ export class GraderCellHandler implements CellHandler {
     /**
      * The editor is shown for Markdown content currently (instead of the content itself)
      */
-    private isInEditMode: boolean = false;
     private isCurrentlyRunning: boolean = false;
     private isCurrentlyLoadingPyodide: boolean = false;
 
@@ -56,11 +48,9 @@ export class GraderCellHandler implements CellHandler {
         this.runtime = runtime;
 
         if (this.getNBGraderMetadata() === undefined) {
-            
             this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
         }
         this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
-        this.markdownOutputElement = document.createElement("div");
 
         const starboardGraderMetadata = (this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined);
         if (!starboardGraderMetadata) {
@@ -95,22 +85,7 @@ export class GraderCellHandler implements CellHandler {
 
             return cellControlsTemplate({ buttons });
         } else {
-            let editOrRunButton: ControlButton;
-            if (this.isInEditMode) {
-                editOrRunButton = {
-                    icon: icons.PlayCircleIcon,
-                    tooltip: "Render as HTML",
-                    callback: () => this.runtime.controls.emit({id: this.cell.id, type: "RUN_CELL"}),
-                };
-            } else {
-                editOrRunButton = {
-                    icon: icons.TextEditIcon,
-                    tooltip: "Edit Markdown",
-                    callback: () => this.enterEditMode(),
-                };
-            }
-            
-            return cellControlsTemplate({ buttons: [editOrRunButton] });
+            return ''
         }
     }
 
@@ -120,15 +95,16 @@ export class GraderCellHandler implements CellHandler {
         lithtml.render(this.getControls(), this.elements.topControlsElement);
     }
 
-    private enterEditMode() {
-        this.isInEditMode = true;
-        this.markdownOutputElement.innerHTML = "";
-        this.setupEditor();
-        this.updateRender();
-    }
-
     private setupEditor() {
-        this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
+        if (this.editor !== undefined) {
+            this.editor.dispose();
+        }
+
+        if (this.underlyingCellType === "python") {
+            this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
+        } else {
+            this.editor = new StarboardContentEditor(this.cell);
+        }
     }
 
     private changeNBType(newType: GraderCellType) {
@@ -164,8 +140,6 @@ export class GraderCellHandler implements CellHandler {
             this.underlyingCellType = newLanguage;
             this.setupEditor();
             this.cell.metadata.starboard_grader = {original_cell_type: this.underlyingCellType};
-            this.isInEditMode = true;
-            this.markdownOutputElement.innerHTML = "";
 
             this.updateRender();
         }
@@ -201,7 +175,7 @@ export class GraderCellHandler implements CellHandler {
                     >
                     ${def.name}
                     </button>
-                ` 
+                `
             )}
             </div>
 
@@ -242,50 +216,23 @@ export class GraderCellHandler implements CellHandler {
             ${body}
         </div>
         <div>${this.editor}</div>
-        ${this.markdownOutputElement}
         `
     }
 
     attach(params: CellHandlerAttachParameters) {
         this.elements = params.elements;
-        this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
 
-        if (this.underlyingCellType === "markdown") {
-            if (this.cell.textContent !== "") {
-                this.run();
-            } else { // When creating an empty cell, it makes more sense to start in editor mode
-                this.enterEditMode();
-            }
-        }
+        this.setupEditor();
         this.updateRender();
     }
 
     async run() {
         // TODO: evaluate Python if it's a Python cell.
         if (this.underlyingCellType === "markdown") {
-            const topElement = this.elements.topElement;
-
-            if (this.editor !== undefined) {
-                this.editor.dispose();
-                delete this.editor;
-            }
-
-            const outDiv = document.createElement("div");
-            outDiv.classList.add("markdown-body", "mt-3", "mb-1");
-            outDiv.innerHTML = md.render(this.cell.textContent);
-
-            await katexHookPromise;
-
-            outDiv.innerHTML = md.render(this.cell.textContent);
-            this.markdownOutputElement.innerHTML = "";
-            this.markdownOutputElement.appendChild(outDiv);
-            this.markdownOutputElement.children[0].addEventListener("dblclick", (_event: any) => this.enterEditMode());
-            this.isInEditMode = false;
             this.updateRender();
         } else if (this.underlyingCellType === "python"){
 
             const pythonPlugin = await this.runtime.exports.libraries.async.StarboardPython();
-            this.markdownOutputElement.innerHTML = "";
 
             const codeToRun = this.cell.textContent;
 
