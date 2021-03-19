@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Starboard-based nbgrader demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <style>
+        body, html {
+            position: relative;
+            background-color: #fcfcfc;
+            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+            margin: 0;
+            padding: 0;
+            max-width: 100vw;
+            overflow: auto;
+        }
+
+        .preview {
+            flex-basis: auto;
+            width: 48%;
+            margin-right: 0.25em;
+        }
+
+        .preview pre {
+            background-color: #f4f4f4;
+            overflow: auto;
+            margin: 1em;
+            max-height: 320px;
+        }
+
+    </style>
+</head>
+
+<body>
+    <script type="module" src="demo.js"></script>
+
+    <section style="margin: 1em">
+        <h4>Load or download .ipynb file</h4>
+        <input type="file" id="file-selector">
+
+        <button style="margin-left: 1em" id="download-button">Download current .ipynb</button>
+
+        <div style="display: flex; max-width: 100%">
+            <div class="preview">
+                <h4>Current Starboard content</h4>
+                <p></p>
+                <pre id="sb-notebook-content-display"></pre>
+            </div>
+
+            <div class="preview">
+                <h4>Current Jupyter content</h4>
+                <pre id="ipynb-notebook-content-display"></pre>
+            </div>
+        </div>
+    </section>
+
+    <div id="mount-point"></div>
+</body>
+</html>
