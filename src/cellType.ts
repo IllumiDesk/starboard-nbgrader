@@ -11,6 +11,7 @@ import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit-html";
+import { CodeRunnerFeedbackElement } from "./elements/codeRunnerFeedback";
 
 declare const runtime: Runtime
 declare const html: typeof lithtml.html;
@@ -42,6 +43,7 @@ export class GraderCellHandler implements CellHandler {
      * more than 1 overlapping runs of Python in this cell.
      */
     private lastRunId = -1;
+    private codeRunnerFeedbackElement: CodeRunnerFeedbackElement
 
     constructor(cell: Cell, runtime: Runtime) {
         this.cell = cell;
@@ -51,6 +53,8 @@ export class GraderCellHandler implements CellHandler {
             this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
         }
         this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
+
+        this.codeRunnerFeedbackElement = new CodeRunnerFeedbackElement();
 
         const starboardGraderMetadata = (this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined);
         if (!starboardGraderMetadata) {
@@ -93,6 +97,7 @@ export class GraderCellHandler implements CellHandler {
         const topElement = this.elements.topElement;
         lithtml.render(this.topbarTemplate(), topElement);
         lithtml.render(this.getControls(), this.elements.topControlsElement);
+        lithtml.render(html`${this.codeRunnerFeedbackElement}`, this.elements.bottomElement);
     }
 
     private setupEditor() {
@@ -231,8 +236,8 @@ export class GraderCellHandler implements CellHandler {
         if (this.underlyingCellType === "markdown") {
             this.updateRender();
         } else if (this.underlyingCellType === "python"){
-
             const pythonPlugin = await this.runtime.exports.libraries.async.StarboardPython();
+            this.codeRunnerFeedbackElement.reset();
 
             const codeToRun = this.cell.textContent;
 
@@ -244,11 +249,20 @@ export class GraderCellHandler implements CellHandler {
                 this.isCurrentlyLoadingPyodide = true;
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
             }
-            const val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, this.elements.bottomElement);
+
+            let val = undefined;
+            let didError = false;
+            try {
+                val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, this.codeRunnerFeedbackElement.getOutputElement());
+            } catch(e) {
+                didError = true;
+            }
             this.isCurrentlyLoadingPyodide = false;
             if (this.lastRunId === currentRunId) {
                 this.isCurrentlyRunning = false;
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
+
+                this.codeRunnerFeedbackElement.setRunResult(didError ? "fail" : "success");
             }
 
             return val;
