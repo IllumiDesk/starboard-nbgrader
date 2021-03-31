@@ -11,7 +11,7 @@ import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit-html";
-import { CodeRunnerFeedbackElement } from "./elements/codeRunnerFeedback";
+import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
 
 declare const runtime: Runtime
 declare const html: typeof lithtml.html;
@@ -226,7 +226,6 @@ export class GraderCellHandler implements CellHandler {
 
     attach(params: CellHandlerAttachParameters) {
         this.elements = params.elements;
-
         this.setupEditor();
         this.updateRender();
     }
@@ -244,9 +243,11 @@ export class GraderCellHandler implements CellHandler {
             this.lastRunId++;
             const currentRunId = this.lastRunId;
             this.isCurrentlyRunning = true;
+            this.codeRunnerFeedbackElement.setRunResult("running");
 
             if (pythonPlugin.getPyodideLoadingStatus() !== "ready") {
                 this.isCurrentlyLoadingPyodide = true;
+                this.codeRunnerFeedbackElement.setRunResult("running-setup");
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
             }
 
@@ -257,12 +258,17 @@ export class GraderCellHandler implements CellHandler {
             } catch(e) {
                 didError = true;
             }
+
             this.isCurrentlyLoadingPyodide = false;
             if (this.lastRunId === currentRunId) {
                 this.isCurrentlyRunning = false;
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
 
-                this.codeRunnerFeedbackElement.setRunResult(didError ? "fail" : "success");
+                let runnerStatusCode: CodeRunnerResult = didError ? "fail" : "success";
+                if (this.graderType === "autograder-tests") {
+                    runnerStatusCode = didError ? "test-fail" : "test-success";
+                }
+                this.codeRunnerFeedbackElement.setRunResult(runnerStatusCode);
             }
 
             return val;

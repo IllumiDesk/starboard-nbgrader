@@ -9,3 +9,24 @@
     border-bottom-right-radius: 0;
     border-bottom: 1px transparent solid;
 }
+
+.grader-code-feedback-bar {
+    border: 1px solid #999;
+    background-color: #fafafa;
+    padding: 0.2em 0.4em;
+    font-size: 0.75em;
+}
+.grader-code-feedback-bar.success,  .grader-code-feedback-bar.test-success{
+    border: 1px solid #00ce6e;
+    background-color: #baedc0;
+}
+
+.grader-code-feedback-bar.fail, .grader-code-feedback-bar.test-fail {
+    border: 1px solid #d20d0d;
+    background-color: #eba0ac;
+}
+
+.grader-code-feedback-bar.running, .grader-code-feedback-bar.running-setup {
+    border: 1px solid #9ad0ff;
+    background-color: #e4f6ff;
+}

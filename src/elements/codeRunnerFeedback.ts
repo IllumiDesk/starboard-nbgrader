@@ -1,6 +1,6 @@
 import {LitElement, LitHtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 
-export type CodeRunnerResult = "empty" | "success" | "fail";
+export type CodeRunnerResult = "empty" | "success" | "test-success" | "test-fail" | "fail" | "running" | "running-setup";
 
 const html = LitHtml.html;
 
@@ -37,34 +37,45 @@ export class CodeRunnerFeedbackElement extends LitElement.LitElement {
 
     render() {
         return html`
-            <style>
-                .grader-code-feedback-bar {
-                    border: 1px solid #999;
-                    background-color: #fafafa;
-                    padding: 0.2em;
-                    font-size: 0.8em;
-                }
-                .grader-code-feedback-bar.success {
-                    border: 1px solid #999;
-                    background-color: #baedc0;
-                }
-
-                .grader-code-feedback-bar.fail {
-                    border: 1px solid #999;
-                    background-color: #eba0ac;
-                }
-            </style>
             ${this.result === "empty" ? undefined : 
                 html`
                 <div class="grader-code-feedback-bar ${this.result}">
                     ${
-                        this.result === "success" ? 
-                        html`<div>
-                            ✅ Code ran succesfully
-                        </div>`:
-                        html`<div>
-                            ❌ An exception was thrown (tests failed)
-                        </div>`
+                        (() => {
+                            switch(this.result) {
+                                case("success"): {
+                                    return html`<div>
+                                    ✅ Code ran succesfully
+                                    </div>`
+                                }
+                                case("fail"): {
+                                    return html`<div>
+                                    ❌ An error was thrown
+                                    </div>`
+                                }
+                                case("test-success"): {
+                                    return html`<div>
+                                    ✅ Tests passed
+                                    </div>`
+                                }
+                                case("test-fail"): {
+                                    return html`<div>
+                                    ❌ Tests failed.
+                                    </div>`
+                                }
+                                case("running"): {
+                                    return html`<div>
+                                    ⚙️ Cell is running..
+                                    </div>`
+                                }
+                                case("running-setup"): {
+                                    return html`<div>
+                                    ⚙️ Cell is running.. <small>(for the first time, setup will take some extra time)</small>
+                                    </div>`
+                                }
+                            }
+                           
+                        })()
                     }
                 </div>`
             }
