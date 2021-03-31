@@ -194,7 +194,10 @@ export class GraderCellHandler implements CellHandler {
                     </button>`)}
             </div>
 
-            <small>${DEFINITIONS[this.graderType].description}</small>
+            <p style="opacity: 0.8"><small>${DEFINITIONS[this.graderType].description}</small></p>
+
+            ${DEFINITIONS[this.graderType].hasPoints ?
+            html`
             <hr>
 
             <div class="row">
@@ -208,13 +211,14 @@ export class GraderCellHandler implements CellHandler {
                     : undefined
                 }
                 </div>
-                <div class="col-auto">
+                <!-- <div class="col-auto">
                 <div class="input-group input-group-sm mb-3">
                     <span class="input-group-text">Cell ID</span>
                     <input @input="${(e: any) => this.changeCellId(e)}" class="form-control" name="grader-id" type="text" min="1" max="128" placeholder="Unique alphanumerical ID" value="${md.grade_id || this.cell.id}">
                 </div>
-                </div>
+                </div> -->
             </div>
+            ` : undefined }
             `
         return html`
         <div class="grader-cell grader-cell-top-bar">

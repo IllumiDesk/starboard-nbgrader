@@ -70,7 +70,7 @@ export class CodeRunnerFeedbackElement extends LitElement.LitElement {
                                 }
                                 case("running-setup"): {
                                     return html`<div>
-                                    ⚙️ Cell is running.. <small>(for the first time, setup will take some extra time)</small>
+                                    ⚙️ Cell is running.. <small>(First time setup will take some extra time)</small>
                                     </div>`
                                 }
                             }
