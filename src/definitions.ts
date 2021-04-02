@@ -75,7 +75,7 @@ export const GraderCellTypeDefinitions: Record<GraderCellType, GraderCellTypeDef
     }
 }
 
-export function getDefaultCellMetadata(cellId: string): NBGraderMetadata {
+export function getDefaultCellNBGraderMetadata(cellId: string): NBGraderMetadata {
     const md: NBGraderMetadata = {
         solution: true,
         grade: true,

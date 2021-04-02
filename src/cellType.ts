@@ -1,7 +1,7 @@
 import {Cell} from "starboard-notebook/dist/src/types"
 import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/runtime"
 
-import {GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
+import {getDefaultCellNBGraderMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
 import {LitHtml as lithtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
@@ -291,7 +291,5 @@ export class GraderCellHandler implements CellHandler {
 export function registerGraderCellType() {
     runtime.definitions.cellTypes.register(GRADER_CELL_TYPE_DEFINITION.cellType, GRADER_CELL_TYPE_DEFINITION);
 }
-function getDefaultCellNBGraderMetadata(id: string): any {
-    throw new Error("Function not implemented.");
-}
+
 
