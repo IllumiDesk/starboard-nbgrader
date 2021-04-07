@@ -1,7 +1,7 @@
 import {Cell} from "starboard-notebook/dist/src/types"
 import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/runtime"
 
-import {getDefaultCellNBGraderMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
+import {convertNBGraderType, getDefaultCellNBGraderMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
 import {LitHtml as lithtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
@@ -28,6 +28,14 @@ export class GraderCellHandler implements CellHandler {
 
     elements!: CellElements;
     editor?: InstanceType<typeof StarboardTextEditor> | InstanceType<typeof StarboardContentEditor>;
+
+    private topbarExpanded = false;
+    /**
+     * Quality of life: If switching away from a cell type that doesn't have points and back again, we remember
+     * the last point count.
+     */
+    private cachedPointCount = 1;
+
 
     private graderType: GraderCellType;
     private underlyingCellType: "python" | "markdown";
@@ -95,7 +103,7 @@ export class GraderCellHandler implements CellHandler {
 
     private updateRender() {
         const topElement = this.elements.topElement;
-        lithtml.render(this.topbarTemplate(), topElement);
+        lithtml.render(this.topTemplate(), topElement);
         lithtml.render(this.getControls(), this.elements.topControlsElement);
         lithtml.render(html`${this.codeRunnerFeedbackElement}`, this.elements.bottomElement);
     }
@@ -116,36 +124,24 @@ export class GraderCellHandler implements CellHandler {
         this.graderType = newType;
         const md = this.getNBGraderMetadata();
 
-        // TODO refactor this logic into a different file/routine
-        if (newType === "manual-answer") {
-            md.grade = md.solution = true;
-            md.task = md.locked = false;
-            md.points = md.points || 1;
-        } else if (newType === "manual-task") {
-            md.grade = md.solution = false;
-            md.task = md.locked = true;
-            md.points = md.points || 1;
-        } else if (newType === "autograder-answer") {
-            md.grade = md.task = md.locked = false;
-            md.solution = true;
-            delete md.points;
-            this.changeLanguage("python");
-        } else if (newType === "autograder-tests") {
-            md.grade = md.locked = true;
-            md.solution = md.task = false;
-            md.points = md.points || 1;
-            this.changeLanguage("python");
+        if (md.points !== undefined) {
+            this.cachedPointCount = md.points
         }
 
+        convertNBGraderType(md, newType, this.cachedPointCount)
+        // These types can't be markdown-based.
+        if (newType === "autograder-answer" || newType === "autograder-tests") {
+            this.changeLanguage("python");
+        }
         this.updateRender();
     }
 
     private changeLanguage(newLanguage: "python" | "markdown") {
         if (newLanguage !== this.underlyingCellType) {
+            this.codeRunnerFeedbackElement = new CodeRunnerFeedbackElement();
             this.underlyingCellType = newLanguage;
             this.setupEditor();
             this.cell.metadata.starboard_grader = {original_cell_type: this.underlyingCellType};
-
             this.updateRender();
         }
     }
@@ -158,72 +154,86 @@ export class GraderCellHandler implements CellHandler {
     }
 
     private changePointValue(evt: Event) {
+        const nbgraderMeta = this.cell.metadata.nbgrader as NBGraderMetadata;
         const newValue = (evt.target as HTMLInputElement).value;
         try {
-            (this.cell.metadata.nbgrader as NBGraderMetadata).points = parseInt(newValue, 10)
+            nbgraderMeta.points = parseInt(newValue, 10)
         } catch(e) {
-            (this.cell.metadata.nbgrader as NBGraderMetadata).points = 0;
+            nbgraderMeta.points = 0;
         }
+        if (isNaN(nbgraderMeta.points) || nbgraderMeta.points < 0) {
+            nbgraderMeta.points = 0;
+        }
+        
+        this.updateRender();
     }
 
-    topbarTemplate() {
+    private toggleExpansion() {
+        this.topbarExpanded = !this.topbarExpanded;
+        this.updateRender();
+    }
+
+    topTemplate() {
         const md = this.getNBGraderMetadata();
-        
-        let body = html`
-            <div class="btn-group btn-sm" role="group" aria-label="Grader cell type">
-                ${Object.entries(DEFINITIONS)
-            .map(([type, def]) => 
-                html`
-                    <button
-                        @click=${() => this.changeNBType(type as GraderCellType)} 
-                        class="btn btn-sm btn-secondary ${this.graderType === type ? "active":""}"
-                    >
-                    ${def.name}
-                    </button>
-                `
-            )}
-            </div>
 
-            <div class="btn-group btn-sm" role="group" style="float: right" aria-label="Cell language">
-            ${DEFINITIONS[this.graderType].supportedCellTypes.map(ct => html`
-                    <button
-                        @click=${() => this.changeLanguage(ct)} 
-                        class="btn btn-sm btn-secondary ${this.underlyingCellType === ct ? "active":""}"
-                    >
-                    ${ct}
-                    </button>`)}
-            </div>
+        const graderDefinition = DEFINITIONS[this.graderType];
 
-            <p style="opacity: 0.8"><small>${DEFINITIONS[this.graderType].description}</small></p>
+        let topbarControls: TemplateResult | undefined;
 
-            ${DEFINITIONS[this.graderType].hasPoints ?
-            html`
-            <hr>
-
-            <div class="row">
-                <div class="col-auto">
-                ${DEFINITIONS[this.graderType].hasPoints ?
+        if (this.topbarExpanded) {
+        topbarControls = html`
+            <div class="grader-cell grader-cell-top-bar ${this.graderType}">
+            <div class="grader-controls">
+                <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
+                    ${Object.entries(DEFINITIONS)
+                .map(([type, def]) => 
                     html`
-                    <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text">Point Value</span>
-                        <input @input="${(e: any) => this.changePointValue(e)}" type="number" min="0" max="999999999999" placeholder="Points (number equal or greater than 0)" class="form-control" value="${md.points || 0}">
-                    </div>`
-                    : undefined
-                }
+                        <button
+                            @click=${() => this.changeNBType(type as GraderCellType)} 
+                            class="btn btn-sm ${this.graderType} ${this.graderType === type ? "active":""}"
+                        >
+                        ${def.emoji} ${def.name}
+                        </button>
+                    `
+                )}
                 </div>
-                <!-- <div class="col-auto">
-                <div class="input-group input-group-sm mb-3">
-                    <span class="input-group-text">Cell ID</span>
-                    <input @input="${(e: any) => this.changeCellId(e)}" class="form-control" name="grader-id" type="text" min="1" max="128" placeholder="Unique alphanumerical ID" value="${md.grade_id || this.cell.id}">
+
+                ${graderDefinition.hasPoints ?
+                html`
+                    ${graderDefinition.hasPoints ?
+                        html`
+                        <div class="input-group input-group-sm mb-3" style="max-width: 132px">
+                            <span class="input-group-text">Points</span>
+                            <input @input="${(e: any) => this.changePointValue(e)}" type="number" min="0" max="999999999999" placeholder="Points (number equal or greater than 0)" class="form-control" value="${md.points || 0}">
+                        </div>`
+                        : undefined
+                    }
+                ` : undefined }
+
+                <div class="btn-group btn-sm pe-0" role="group" style="margin-left: auto" aria-label="Cell language">
+                ${graderDefinition.supportedCellTypes.map(ct => html`
+                        <button
+                            @click=${() => this.changeLanguage(ct)} 
+                            class="btn btn-sm ${this.underlyingCellType === ct ? "active":""}"
+                        >
+                        ${ct}
+                        </button>`)}
                 </div>
-                </div> -->
-            </div>
-            ` : undefined }
-            `
+                </div>
+
+                <p class="mb-0"><small>${graderDefinition.description}</small></p>
+
+            </div>`
+        }
+
         return html`
-        <div class="grader-cell grader-cell-top-bar">
-            ${body}
-        </div>
+        <button @click=${() => this.toggleExpansion()} class="grader-pill ${this.graderType}${this.topbarExpanded ? " expanded" : ""}">
+                    <b>${graderDefinition.emoji} ${graderDefinition.name}</b>
+                    ${graderDefinition.hasPoints ?
+                        html`<span class="ms-1"><small>(${md.points} point${md.points === 1 ? "" : "s"})</small></span>`
+                    : undefined}
+        </button>
+        ${topbarControls}
         <div>${this.editor}</div>
         `
     }

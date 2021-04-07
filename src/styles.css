@@ -1,20 +1,26 @@
 .grader-cell {
-    border: 1px solid #999;
+    border: 3px solid #fff;
     background-color: #fafafa;
     padding: 0.8em;
     border-radius: 6px;
+    border-top-left-radius: 0;
 }
+
 .grader-cell-top-bar {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom: 1px transparent solid;
+    margin-bottom: 1em;
+}
+
+.grader-cell pre {
+    padding: 0 1em;
+    background-color: #f2f2f2;
+    border-left: 4px solid #d0d0d0;
 }
 
 .grader-code-feedback-bar {
     border: 1px solid #999;
     background-color: #fafafa;
     padding: 0.2em 0.4em;
-    font-size: 0.75em;
+    font-size: 0.8em;
 }
 .grader-code-feedback-bar.success,  .grader-code-feedback-bar.test-success{
     border: 1px solid #00ce6e;
@@ -27,6 +33,81 @@
 }
 
 .grader-code-feedback-bar.running, .grader-code-feedback-bar.running-setup {
-    border: 1px solid #9ad0ff;
+    border: 1px solid #ceff93;
     background-color: #e4f6ff;
+}
+
+.grader-pill {
+    padding: 0.16em 0.6em;
+    border-radius: 9px;
+    background-color: var(--brand-color);
+    width: max-content;
+    margin: 0.4em 0.4em 0.4em 0;
+    color: #fff;
+    transition: filter ease-in-out 0.15s;
+    border: 0;
+}
+
+.grader-pill.expanded {
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.grader-controls {
+    display: flex;
+    align-items: baseline;
+}
+
+.grader-controls * .btn {
+    background-color: #fefefe;
+    border-color: #6c757d;
+}
+
+.grader-controls * .btn:hover {
+    filter: brightness(0.95);
+}
+
+.grader-controls * .btn.active {
+    font-weight: bold;
+}
+
+.grader-pill:hover {
+    filter: brightness(1.03);
+}
+
+.grader-pill.manual-task, .btn.manual-task.active {
+    background-color: #ceff93;
+    color: #313131;
+}
+
+.grader-cell.manual-task {
+    border-color: #ceff93;
+}
+
+.grader-pill.manual-answer, .btn.manual-answer.active {
+    background-color: #ffe6ab;
+    color: #313131;
+}
+
+.grader-cell.manual-answer {
+    border-color: #ffe6ab;
+}
+
+.grader-pill.autograder-answer, .btn.autograder-answer.active {
+    background-color: #00307b;
+    color: #fff;
+}
+
+.grader-cell.autograder-answer {
+    border-color: #00307b;
+}
+
+.grader-pill.autograder-tests, .btn.autograder-tests.active {
+    background-color: #851cb6;
+    color: #fff;
+}
+
+.grader-cell.autograder-tests {
+    border-color: #851cb6;
 }
