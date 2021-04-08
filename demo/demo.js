@@ -1,13 +1,13 @@
 import {convertJupyterStringToStarboardString, convertStarboardStringToJupyterString} from "https://cdn.skypack.dev/jupystar";
-import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap";
-import {upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell} from "http://localhost:8080/dist/converter.js";
+import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap@0.2.4";
+import {upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell} from "../dist/converter.js";
 
 let currentStarboardNotebookContent = `
 # %%--- [javascript]
 # properties:
 #   run_on_load: true
 # ---%%
-const {initPlugin} = await import("http://localhost:8080/dist/plugin.js");
+const {initPlugin} = await import("../dist/plugin.js");
 initPlugin();
 
 # %% [grader]
@@ -185,11 +185,16 @@ function createNotebook(content) {
         mount.removeChild(mount.children[0]);
     }
 
+    const href = window.location.href;
+    const baseUrl = href.substring(0, href.lastIndexOf('/')) + "/";
+
     const el = new StarboardNotebookIFrame({
         // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
         // have a clean way to load plugins at runtime level yet, coming soon!
         notebookContent: prependPluginLoaderCell(content),
-        src: "https://unpkg.com/starboard-notebook@0.7.19/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.8.2/dist/index.html",
+        // src: "http://localhost:9001/index.html",
+        baseUrl: baseUrl,
 
         onSaveMessage(payload) {
             save(payload.content);

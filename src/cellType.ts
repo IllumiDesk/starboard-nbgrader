@@ -1,17 +1,17 @@
 import {Cell} from "starboard-notebook/dist/src/types"
 import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/runtime"
 
-import {getDefaultCellMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
+import {convertNBGraderType, getDefaultCellNBGraderMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
-import {LitHtml as lithtml, MarkdownIt as mdlib} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
-import { StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
+import {LitHtml as lithtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
-import { hookMarkdownItToKaTeX, hookMarkdownItToPrismHighlighter } from "starboard-notebook/dist/src/runtime/esm/exports/core";
 
 
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit-html";
+import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
 
 declare const runtime: Runtime
 declare const html: typeof lithtml.html;
@@ -22,18 +22,20 @@ const GRADER_CELL_TYPE_DEFINITION = {
     createHandler: (cell: Cell, runtime: Runtime) => new GraderCellHandler(cell, runtime),
 }
 
-const md = new mdlib({html: true});
-hookMarkdownItToPrismHighlighter(md);
-const katexHookPromise = hookMarkdownItToKaTeX(md);
-
 export class GraderCellHandler implements CellHandler {
     cell: Cell;
     runtime: Runtime;
 
     elements!: CellElements;
-    editor?: InstanceType<typeof StarboardTextEditor>;
+    editor?: InstanceType<typeof StarboardTextEditor> | InstanceType<typeof StarboardContentEditor>;
 
-    private markdownOutputElement: HTMLDivElement;
+    private topbarExpanded = false;
+    /**
+     * Quality of life: If switching away from a cell type that doesn't have points and back again, we remember
+     * the last point count.
+     */
+    private cachedPointCount = 1;
+
 
     private graderType: GraderCellType;
     private underlyingCellType: "python" | "markdown";
@@ -41,7 +43,6 @@ export class GraderCellHandler implements CellHandler {
     /**
      * The editor is shown for Markdown content currently (instead of the content itself)
      */
-    private isInEditMode: boolean = false;
     private isCurrentlyRunning: boolean = false;
     private isCurrentlyLoadingPyodide: boolean = false;
 
@@ -50,17 +51,18 @@ export class GraderCellHandler implements CellHandler {
      * more than 1 overlapping runs of Python in this cell.
      */
     private lastRunId = -1;
+    private codeRunnerFeedbackElement: CodeRunnerFeedbackElement
 
     constructor(cell: Cell, runtime: Runtime) {
         this.cell = cell;
         this.runtime = runtime;
 
         if (this.getNBGraderMetadata() === undefined) {
-            
             this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
         }
         this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
-        this.markdownOutputElement = document.createElement("div");
+
+        this.codeRunnerFeedbackElement = new CodeRunnerFeedbackElement();
 
         const starboardGraderMetadata = (this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined);
         if (!starboardGraderMetadata) {
@@ -95,79 +97,51 @@ export class GraderCellHandler implements CellHandler {
 
             return cellControlsTemplate({ buttons });
         } else {
-            let editOrRunButton: ControlButton;
-            if (this.isInEditMode) {
-                editOrRunButton = {
-                    icon: icons.PlayCircleIcon,
-                    tooltip: "Render as HTML",
-                    callback: () => this.runtime.controls.emit({id: this.cell.id, type: "RUN_CELL"}),
-                };
-            } else {
-                editOrRunButton = {
-                    icon: icons.TextEditIcon,
-                    tooltip: "Edit Markdown",
-                    callback: () => this.enterEditMode(),
-                };
-            }
-            
-            return cellControlsTemplate({ buttons: [editOrRunButton] });
+            return ''
         }
     }
 
     private updateRender() {
         const topElement = this.elements.topElement;
-        lithtml.render(this.topbarTemplate(), topElement);
+        lithtml.render(this.topTemplate(), topElement);
         lithtml.render(this.getControls(), this.elements.topControlsElement);
-    }
-
-    private enterEditMode() {
-        this.isInEditMode = true;
-        this.markdownOutputElement.innerHTML = "";
-        this.setupEditor();
-        this.updateRender();
+        lithtml.render(html`${this.codeRunnerFeedbackElement}`, this.elements.bottomElement);
     }
 
     private setupEditor() {
-        this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
+        if (this.editor !== undefined) {
+            this.editor.dispose();
+        }
+
+        if (this.underlyingCellType === "python") {
+            this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
+        } else {
+            this.editor = new StarboardContentEditor(this.cell);
+        }
     }
 
     private changeNBType(newType: GraderCellType) {
         this.graderType = newType;
         const md = this.getNBGraderMetadata();
 
-        // TODO refactor this logic into a different file/routine
-
-        if (newType === "manual-answer") {
-            md.grade = md.solution = true;
-            md.task = md.locked = false;
-            md.points = md.points || 1;
-        } else if (newType === "manual-task") {
-            md.grade = md.solution = false;
-            md.task = md.locked = true;
-            md.points = md.points || 1;
-        } else if (newType === "autograder-answer") {
-            md.grade = md.task = md.locked = false;
-            md.solution = true;
-            delete md.points;
-            this.changeLanguage("python");
-        } else if (newType === "autograder-tests") {
-            md.grade = md.locked = true;
-            md.solution = md.task = false;
-            md.points = md.points || 1;
-            this.changeLanguage("python");
+        if (md.points !== undefined) {
+            this.cachedPointCount = md.points
         }
 
+        convertNBGraderType(md, newType, this.cachedPointCount)
+        // These types can't be markdown-based.
+        if (newType === "autograder-answer" || newType === "autograder-tests") {
+            this.changeLanguage("python");
+        }
         this.updateRender();
     }
 
     private changeLanguage(newLanguage: "python" | "markdown") {
         if (newLanguage !== this.underlyingCellType) {
+            this.codeRunnerFeedbackElement = new CodeRunnerFeedbackElement();
             this.underlyingCellType = newLanguage;
             this.setupEditor();
             this.cell.metadata.starboard_grader = {original_cell_type: this.underlyingCellType};
-            this.isInEditMode = true;
-            this.markdownOutputElement.innerHTML = "";
-
             this.updateRender();
         }
     }
@@ -180,142 +154,135 @@ export class GraderCellHandler implements CellHandler {
     }
 
     private changePointValue(evt: Event) {
+        const nbgraderMeta = this.cell.metadata.nbgrader as NBGraderMetadata;
         const newValue = (evt.target as HTMLInputElement).value;
         try {
-            (this.cell.metadata.nbgrader as NBGraderMetadata).points = parseInt(newValue, 10)
+            nbgraderMeta.points = parseInt(newValue, 10)
         } catch(e) {
-            (this.cell.metadata.nbgrader as NBGraderMetadata).points = 0;
+            nbgraderMeta.points = 0;
         }
+        if (isNaN(nbgraderMeta.points) || nbgraderMeta.points < 0) {
+            nbgraderMeta.points = 0;
+        }
+        
+        this.updateRender();
     }
 
-    topbarTemplate() {
+    private toggleExpansion() {
+        this.topbarExpanded = !this.topbarExpanded;
+        this.updateRender();
+    }
+
+    topTemplate() {
         const md = this.getNBGraderMetadata();
-        
-        let body = html`
-            <div class="btn-group btn-sm" role="group" aria-label="Grader cell type">
-                ${Object.entries(DEFINITIONS)
-            .map(([type, def]) => 
-                html`
-                    <button
-                        @click=${() => this.changeNBType(type as GraderCellType)} 
-                        class="btn btn-sm btn-secondary ${this.graderType === type ? "active":""}"
-                    >
-                    ${def.name}
-                    </button>
-                ` 
-            )}
-            </div>
 
-            <div class="btn-group btn-sm" role="group" style="float: right" aria-label="Cell language">
-            ${DEFINITIONS[this.graderType].supportedCellTypes.map(ct => html`
-                    <button
-                        @click=${() => this.changeLanguage(ct)} 
-                        class="btn btn-sm btn-secondary ${this.underlyingCellType === ct ? "active":""}"
-                    >
-                    ${ct}
-                    </button>`)}
-            </div>
+        const graderDefinition = DEFINITIONS[this.graderType];
 
-            <small>${DEFINITIONS[this.graderType].description}</small>
-            <hr>
+        let topbarControls: TemplateResult | undefined;
 
-            <div class="row">
-                <div class="col-auto">
-                ${DEFINITIONS[this.graderType].hasPoints ?
+        if (this.topbarExpanded) {
+        topbarControls = html`
+            <div class="grader-cell grader-cell-top-bar ${this.graderType}">
+            <div class="grader-controls">
+                <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
+                    ${Object.entries(DEFINITIONS)
+                .map(([type, def]) => 
                     html`
-                    <div class="input-group input-group-sm mb-3">
-                        <span class="input-group-text">Point Value</span>
-                        <input @input="${(e: any) => this.changePointValue(e)}" type="number" min="0" max="999999999999" placeholder="Points (number equal or greater than 0)" class="form-control" value="${md.points || 0}">
-                    </div>`
-                    : undefined
-                }
+                        <button
+                            @click=${() => this.changeNBType(type as GraderCellType)} 
+                            class="btn btn-sm ${this.graderType} ${this.graderType === type ? "active":""}"
+                        >
+                        ${def.emoji} ${def.name}
+                        </button>
+                    `
+                )}
                 </div>
-                <div class="col-auto">
-                <div class="input-group input-group-sm mb-3">
-                    <span class="input-group-text">Cell ID</span>
-                    <input @input="${(e: any) => this.changeCellId(e)}" class="form-control" name="grader-id" type="text" min="1" max="128" placeholder="Unique alphanumerical ID" value="${md.grade_id || this.cell.id}">
+
+                ${graderDefinition.hasPoints ?
+                html`
+                    ${graderDefinition.hasPoints ?
+                        html`
+                        <div class="input-group input-group-sm mb-3" style="max-width: 132px">
+                            <span class="input-group-text">Points</span>
+                            <input @input="${(e: any) => this.changePointValue(e)}" type="number" min="0" max="999999999999" placeholder="Points (number equal or greater than 0)" class="form-control" value="${md.points || 0}">
+                        </div>`
+                        : undefined
+                    }
+                ` : undefined }
+
+                <div class="btn-group btn-sm pe-0" role="group" style="margin-left: auto" aria-label="Cell language">
+                ${graderDefinition.supportedCellTypes.map(ct => html`
+                        <button
+                            @click=${() => this.changeLanguage(ct)} 
+                            class="btn btn-sm ${this.underlyingCellType === ct ? "active":""}"
+                        >
+                        ${ct}
+                        </button>`)}
                 </div>
                 </div>
-            </div>
-            `
+
+                <p class="mb-0"><small>${graderDefinition.description}</small></p>
+
+            </div>`
+        }
+
         return html`
-        <style>
-            .grader-cell {
-                border: 1px solid #999;
-                background-color: #fafafa;
-                padding: 0.8em;
-                border-radius: 6px;
-            }
-            .grader-cell-top-bar {
-                border-bottom-left-radius: 0;
-                border-bottom-right-radius: 0;
-                border-bottom: 1px transparent solid;
-            }
-        </style>
-        <div class="grader-cell grader-cell-top-bar">
-            ${body}
-        </div>
+        <button @click=${() => this.toggleExpansion()} class="grader-pill ${this.graderType}${this.topbarExpanded ? " expanded" : ""}">
+                    <b>${graderDefinition.emoji} ${graderDefinition.name}</b>
+                    ${graderDefinition.hasPoints ?
+                        html`<span class="ms-1"><small>(${md.points} point${md.points === 1 ? "" : "s"})</small></span>`
+                    : undefined}
+        </button>
+        ${topbarControls}
         <div>${this.editor}</div>
-        ${this.markdownOutputElement}
         `
     }
 
     attach(params: CellHandlerAttachParameters) {
         this.elements = params.elements;
-        this.editor = new StarboardTextEditor(this.cell, this.runtime, {language: this.underlyingCellType});
-
-        if (this.underlyingCellType === "markdown") {
-            if (this.cell.textContent !== "") {
-                this.run();
-            } else { // When creating an empty cell, it makes more sense to start in editor mode
-                this.enterEditMode();
-            }
-        }
+        this.setupEditor();
         this.updateRender();
     }
 
     async run() {
         // TODO: evaluate Python if it's a Python cell.
         if (this.underlyingCellType === "markdown") {
-            const topElement = this.elements.topElement;
-
-            if (this.editor !== undefined) {
-                this.editor.dispose();
-                delete this.editor;
-            }
-
-            const outDiv = document.createElement("div");
-            outDiv.classList.add("markdown-body", "mt-3", "mb-1");
-            outDiv.innerHTML = md.render(this.cell.textContent);
-
-            await katexHookPromise;
-
-            outDiv.innerHTML = md.render(this.cell.textContent);
-            this.markdownOutputElement.innerHTML = "";
-            this.markdownOutputElement.appendChild(outDiv);
-            this.markdownOutputElement.children[0].addEventListener("dblclick", (_event: any) => this.enterEditMode());
-            this.isInEditMode = false;
             this.updateRender();
         } else if (this.underlyingCellType === "python"){
-
             const pythonPlugin = await this.runtime.exports.libraries.async.StarboardPython();
-            this.markdownOutputElement.innerHTML = "";
+            this.codeRunnerFeedbackElement.reset();
 
             const codeToRun = this.cell.textContent;
 
             this.lastRunId++;
             const currentRunId = this.lastRunId;
             this.isCurrentlyRunning = true;
+            this.codeRunnerFeedbackElement.setRunResult("running");
 
             if (pythonPlugin.getPyodideLoadingStatus() !== "ready") {
                 this.isCurrentlyLoadingPyodide = true;
+                this.codeRunnerFeedbackElement.setRunResult("running-setup");
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
             }
-            const val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, this.elements.bottomElement);
+
+            let val = undefined;
+            let didError = false;
+            try {
+                val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, this.codeRunnerFeedbackElement.getOutputElement());
+            } catch(e) {
+                didError = true;
+            }
+
             this.isCurrentlyLoadingPyodide = false;
             if (this.lastRunId === currentRunId) {
                 this.isCurrentlyRunning = false;
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
+
+                let runnerStatusCode: CodeRunnerResult = didError ? "fail" : "success";
+                if (this.graderType === "autograder-tests") {
+                    runnerStatusCode = didError ? "test-fail" : "test-success";
+                }
+                this.codeRunnerFeedbackElement.setRunResult(runnerStatusCode);
             }
 
             return val;
@@ -334,7 +301,5 @@ export class GraderCellHandler implements CellHandler {
 export function registerGraderCellType() {
     runtime.definitions.cellTypes.register(GRADER_CELL_TYPE_DEFINITION.cellType, GRADER_CELL_TYPE_DEFINITION);
 }
-function getDefaultCellNBGraderMetadata(id: string): any {
-    throw new Error("Function not implemented.");
-}
+
 
