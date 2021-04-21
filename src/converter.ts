@@ -1,4 +1,4 @@
-import { NotebookContent } from "starboard-notebook/dist/src/runtime";
+import { NotebookContent } from "starboard-notebook/dist/src/types";
 import { textToNotebookContent } from "starboard-notebook/dist/src/content/parsing"
 import { notebookContentToText } from "starboard-notebook/dist/src/content/serialization"
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
@@ -44,8 +44,7 @@ export function prependPluginLoaderCell(nb: string) {
             cellType: "javascript",
             metadata: {id: "nbgrader-init-cell", properties:{run_on_load: true}},
             id: "nbgrader-init-cell",
-            textContent: `
-            const baseImport = (path) => import(document.querySelector("base").href + path);
+            textContent: `const baseImport = (path) => import(document.querySelector("base").href + path);
 const {initPlugin} = await baseImport("../dist/plugin.js");
 initPlugin();
 runtime.controls.removeCell("nbgrader-init-cell");

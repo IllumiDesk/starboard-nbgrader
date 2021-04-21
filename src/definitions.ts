@@ -1,6 +1,6 @@
 
 import { TemplateResult } from "lit-html";
-import { Runtime } from "starboard-notebook/dist/src/runtime";
+import { Runtime } from "starboard-notebook/dist/src/types";
 import { LitHtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { NBGraderMetadata } from "./types";
 

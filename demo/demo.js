@@ -1,5 +1,5 @@
 import {convertJupyterStringToStarboardString, convertStarboardStringToJupyterString} from "https://cdn.skypack.dev/jupystar";
-import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap@0.2.4";
+import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap@0.2.5";
 import {upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell} from "../dist/converter.js";
 
 let currentStarboardNotebookContent = `
@@ -192,7 +192,7 @@ function createNotebook(content) {
         // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
         // have a clean way to load plugins at runtime level yet, coming soon!
         notebookContent: prependPluginLoaderCell(content),
-        src: "https://unpkg.com/starboard-notebook@0.8.2/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.8.10/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,
 

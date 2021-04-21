@@ -1,12 +1,11 @@
 import {Cell} from "starboard-notebook/dist/src/types"
-import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/runtime"
+import {CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime} from "starboard-notebook/dist/src/types"
 
-import {convertNBGraderType, getDefaultCellNBGraderMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
+import { convertNBGraderType, getDefaultCellNBGraderMetadata, GraderCellType, GraderCellTypeDefinitions as DEFINITIONS} from "./definitions";
 
-import {LitHtml as lithtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { LitHtml as lithtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
-
 
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
