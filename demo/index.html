@@ -42,18 +42,21 @@
 
         <button style="margin-left: 1em" id="download-button">Download current .ipynb</button>
 
-        <div style="display: flex; max-width: 100%">
-            <div class="preview">
-                <h4>Current Starboard content</h4>
-                <p></p>
-                <pre id="sb-notebook-content-display"></pre>
-            </div>
+        <details>
+            <summary><small><b>View text representation</b></small></summary>
+            <div style="display: flex; max-width: 100%">
+                <div class="preview">
+                    <h4>Current Starboard content</h4>
+                    <p></p>
+                    <pre id="sb-notebook-content-display"></pre>
+                </div>
 
-            <div class="preview">
-                <h4>Current Jupyter content</h4>
-                <pre id="ipynb-notebook-content-display"></pre>
+                <div class="preview">
+                    <h4>Current Jupyter content</h4>
+                    <pre id="ipynb-notebook-content-display"></pre>
+                </div>
             </div>
-        </div>
+        </details>
     </section>
 
     <div id="mount-point"></div>
