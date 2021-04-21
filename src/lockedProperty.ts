@@ -1,4 +1,4 @@
-import { Runtime } from "starboard-notebook/dist/src/runtime";
+import { Runtime } from "starboard-notebook/dist/src/types";
 
 declare const runtime: Runtime;
 
