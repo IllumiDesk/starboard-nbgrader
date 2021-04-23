@@ -1,3 +1,4 @@
+import { StarboardPlugin } from "starboard-notebook/dist/src/types";
 import { registerGraderCellType } from "./cellType";
 import { registerStudentLockedCellProperty } from "./lockedProperty";
 
@@ -14,4 +15,15 @@ export function initPlugin() {
     styleSheet.id = "nbgrader-styles";
     styleSheet.innerHTML = css
     document.head.appendChild(styleSheet)
+}
+
+export const plugin: StarboardPlugin = {
+    id: "starboard-nbgrader",
+    metadata: {
+        name: "Starboard NBGrader Plugin"
+    },
+    exports: {},
+    async register() {
+        initPlugin();
+    }
 }

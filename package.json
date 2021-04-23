@@ -1,6 +1,6 @@
 {
   "name": "@illumidesk/starboard-nbgrader",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Starboard and nbgrader proof of concept",
   "main": "dist/index.js",
   "dependencies": {
@@ -9,7 +9,7 @@
     "rollup": "^2.41.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
-    "starboard-notebook": "^0.8.10"
+    "starboard-notebook": "^0.8.12"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.1.0",

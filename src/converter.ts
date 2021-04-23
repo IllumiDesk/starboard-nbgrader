@@ -45,10 +45,9 @@ export function prependPluginLoaderCell(nb: string) {
             metadata: {id: "nbgrader-init-cell", properties:{run_on_load: true}},
             id: "nbgrader-init-cell",
             textContent: `const baseImport = (path) => import(document.querySelector("base").href + path);
-const {initPlugin} = await baseImport("../dist/plugin.js");
-initPlugin();
-runtime.controls.removeCell("nbgrader-init-cell");
-`
+const {default: plugin} = await baseImport("../dist/plugin.js");
+runtime.controls.registerPlugin(plugin);
+runtime.controls.removeCell("nbgrader-init-cell");`
         }, ...content.cells]
 
     return notebookContentToText(content);
