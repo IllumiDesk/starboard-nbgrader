@@ -11,9 +11,12 @@ import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit-html";
 import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
+import { getJupyterPlugin } from "./jupyter";
 
 declare const runtime: Runtime
 declare const html: typeof lithtml.html;
+
+type OutputArea = ReturnType<ReturnType<typeof getJupyterPlugin>["exports"]["createJupyterOutputArea"]>;
 
 const GRADER_CELL_TYPE_DEFINITION = {
     name: "Assignment (grader)",
@@ -30,11 +33,13 @@ export class GraderCellHandler implements CellHandler {
 
     private topbarExpanded = false;
     /**
-     * Quality of life: If switching away from a cell type that doesn't have points and back again, we remember
+     * Quality of life feature: When switching away from a cell type that doesn't have points and back again, we remember
      * the last point count.
      */
     private cachedPointCount = 1;
 
+    private useJupyterBackend = true;
+    private jupyterOutputArea?: OutputArea;
 
     private graderType: GraderCellType;
     private underlyingCellType: "python" | "markdown";
@@ -60,7 +65,6 @@ export class GraderCellHandler implements CellHandler {
             this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
         }
         this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
-
         this.codeRunnerFeedbackElement = new CodeRunnerFeedbackElement();
 
         const starboardGraderMetadata = (this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined);
@@ -75,7 +79,7 @@ export class GraderCellHandler implements CellHandler {
         return this.cell.metadata.nbgrader as NBGraderMetadata;
     }
 
-    private getControls(): TemplateResult | string {
+    private getControls(): TemplateResult | string | undefined {
         if (this.underlyingCellType === "python") {
             const icon = this.isCurrentlyRunning ? icons.ClockIcon : icons.PlayCircleIcon;
             const tooltip = this.isCurrentlyRunning ? "Run Cell": "Cell is running";
@@ -95,8 +99,6 @@ export class GraderCellHandler implements CellHandler {
             }
 
             return cellControlsTemplate({ buttons });
-        } else {
-            return ''
         }
     }
 
@@ -142,13 +144,6 @@ export class GraderCellHandler implements CellHandler {
             this.setupEditor();
             this.cell.metadata.starboard_grader = {original_cell_type: this.underlyingCellType};
             this.updateRender();
-        }
-    }
-
-    private changeCellId(evt: Event) {
-        const newValue = (evt.target as HTMLInputElement).value;
-        if (typeof newValue === "string") {
-            (this.cell.metadata.nbgrader as NBGraderMetadata).grade_id = newValue || this.cell.id;
         }
     }
 
@@ -221,7 +216,6 @@ export class GraderCellHandler implements CellHandler {
                 </div>
 
                 <p class="mb-0"><small>${graderDefinition.description}</small></p>
-
             </div>`
         }
 
@@ -244,32 +238,60 @@ export class GraderCellHandler implements CellHandler {
     }
 
     async run() {
-        // TODO: evaluate Python if it's a Python cell.
+        // TODO refactor this.. bigtime
         if (this.underlyingCellType === "markdown") {
             this.updateRender();
         } else if (this.underlyingCellType === "python"){
-            const pythonPlugin = await this.runtime.exports.libraries.async.StarboardPython();
+            const outputMount = this.codeRunnerFeedbackElement.getOutputElement();
             this.codeRunnerFeedbackElement.reset();
 
+            // Pyodide-based plugin
+            let pythonPlugin;
+            // Jupyter-based plugin
+            let jupyterPlugin = getJupyterPlugin();
+
+            if (!this.useJupyterBackend) {
+                pythonPlugin = await this.runtime.exports.libraries.async.StarboardPython();
+                if (pythonPlugin.getPyodideLoadingStatus() !== "ready") {
+                    this.isCurrentlyLoadingPyodide = true;
+                    this.codeRunnerFeedbackElement.setRunResult("running-setup");
+                    lithtml.render(this.getControls(), this.elements.topControlsElement);
+                } else {
+                   this.codeRunnerFeedbackElement.setRunResult("running");
+                }
+            } else {
+                if (!this.jupyterOutputArea) {
+                    this.jupyterOutputArea = jupyterPlugin.exports.createJupyterOutputArea();
+                }
+                this.codeRunnerFeedbackElement.setRunResult("running");
+
+                if (outputMount.children[0] !== this.jupyterOutputArea!.node) {
+                    outputMount.innerHTML = "";
+                    outputMount.append(this.jupyterOutputArea!.node);
+                }
+                
+            }
             const codeToRun = this.cell.textContent;
 
             this.lastRunId++;
             const currentRunId = this.lastRunId;
             this.isCurrentlyRunning = true;
-            this.codeRunnerFeedbackElement.setRunResult("running");
-
-            if (pythonPlugin.getPyodideLoadingStatus() !== "ready") {
-                this.isCurrentlyLoadingPyodide = true;
-                this.codeRunnerFeedbackElement.setRunResult("running-setup");
-                lithtml.render(this.getControls(), this.elements.topControlsElement);
-            }
-
+            let status: "ok" | "abort" | "error" = "ok";
+           
+            // Cell output value
             let val = undefined;
-            let didError = false;
-            try {
-                val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, this.codeRunnerFeedbackElement.getOutputElement());
-            } catch(e) {
-                didError = true;
+            
+            if (this.useJupyterBackend) {
+                await jupyterPlugin.exports.getGlobalKernelManager().runCode({code: codeToRun}, this.jupyterOutputArea!);
+                const x = await this.jupyterOutputArea!.future.done;
+                status = x.content.status;
+                val = x.content;
+            } else {
+                try {
+                    val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, outputMount);
+                } catch(e) {
+                    status = "error";
+                }
             }
 
             this.isCurrentlyLoadingPyodide = false;
@@ -277,13 +299,15 @@ export class GraderCellHandler implements CellHandler {
                 this.isCurrentlyRunning = false;
                 lithtml.render(this.getControls(), this.elements.topControlsElement);
 
-                let runnerStatusCode: CodeRunnerResult = didError ? "fail" : "success";
+                let runnerStatusCode: CodeRunnerResult = status !== "ok" ? "fail" : "success";
                 if (this.graderType === "autograder-tests") {
-                    runnerStatusCode = didError ? "test-fail" : "test-success";
+                    runnerStatusCode = status !== "ok" ? "test-fail" : "test-success";
+                }
+                if (status === "abort") {
+                    runnerStatusCode = "abort"
                 }
                 this.codeRunnerFeedbackElement.setRunResult(runnerStatusCode);
             }
-
             return val;
         }
     }

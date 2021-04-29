@@ -1,13 +1,12 @@
 import {LitElement, LitHtml} from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 
-export type CodeRunnerResult = "empty" | "success" | "test-success" | "test-fail" | "fail" | "running" | "running-setup";
+export type CodeRunnerResult = "empty" | "success" | "test-success" | "test-fail" | "fail" | "running" | "running-setup" | "abort";
 
 const html = LitHtml.html;
 
 @LitElement.customElement("grader-code-feedback")
 export class CodeRunnerFeedbackElement extends LitElement.LitElement {
     showOutput: boolean = true;
-
     result: CodeRunnerResult = "empty";
 
     @LitElement.query(".grader-code-cell-output")
@@ -31,6 +30,10 @@ export class CodeRunnerFeedbackElement extends LitElement.LitElement {
         this.performUpdate();
     }
 
+    /**
+     * A HTML element where the output of the cell should be shown (such as a console output element).
+     * @returns 
+     */
     getOutputElement() {
         return this.outputElement;
     }
@@ -71,6 +74,11 @@ export class CodeRunnerFeedbackElement extends LitElement.LitElement {
                                 case("running-setup"): {
                                     return html`<div>
                                     ⚙️ Cell is running.. (First time Python setup.. please wait)
+                                    </div>`
+                                }
+                                case("abort"): {
+                                    return html`<div>
+                                    ❌ Cell aborted
                                     </div>`
                                 }
                             }

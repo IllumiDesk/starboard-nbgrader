@@ -1,6 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from 'rollup-plugin-typescript2';
+import esbuild from 'rollup-plugin-esbuild'
 import { terser } from 'rollup-plugin-terser';
 
 const CleanCSS = require('clean-css');
@@ -21,18 +22,21 @@ export default [
   input: `src/plugin.ts`,
   output: [
     { file: 'dist/plugin.js', format: 'es' },
-    { file: 'dist/plugin.min.js', format: 'es', plugins: [terser()] },
-    { file: 'dist/plugin.cjs', format: 'cjs' }
+    // { file: 'dist/plugin.min.js', format: 'es', plugins: [terser()] },
+    // { file: 'dist/plugin.cjs', format: 'cjs' }
   ],
   plugins: [
     css(),
-    typescript({
-      include: [
-        './src/**/*.ts',
-      ],
+    esbuild({
+      target: "es2018"
     }),
+    // typescript({
+    //   include: [
+    //     './src/**/*.ts',
+    //   ],
+    // }),
     resolve(),
-    commonjs(),
+    // commonjs(),
   ]
 },
 {
@@ -41,10 +45,13 @@ export default [
     { file: 'dist/converter.js', format: 'es' },
   ],
   plugins: [
-    typescript({
-      include: [
-        './src/**/*.ts',
-      ],
+    // typescript({
+    //   include: [
+    //     './src/**/*.ts',
+    //   ],
+    // }),
+    esbuild({
+      target: "es2018"
     }),
     resolve(),
     commonjs(),

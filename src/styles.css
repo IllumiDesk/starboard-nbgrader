@@ -95,19 +95,19 @@
 }
 
 .grader-pill.autograder-answer, .btn.autograder-answer.active {
-    background-color: #00307b;
+    background-color: #4c86e1;
     color: #fff;
 }
 
 .grader-cell.autograder-answer {
-    border-color: #00307b;
+    border-color: #4c86e1;
 }
 
 .grader-pill.autograder-tests, .btn.autograder-tests.active {
-    background-color: #851cb6;
+    background-color: #995fdf;
     color: #fff;
 }
 
 .grader-cell.autograder-tests {
-    border-color: #851cb6;
+    border-color: #995fdf;
 }

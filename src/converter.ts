@@ -45,8 +45,8 @@ export function prependPluginLoaderCell(nb: string) {
             metadata: {id: "nbgrader-init-cell", properties:{run_on_load: true}},
             id: "nbgrader-init-cell",
             textContent: `const baseImport = (path) => import(document.querySelector("base").href + path);
-const {initPlugin} = await baseImport("../dist/plugin.js");
-initPlugin();
+const {plugin} = await baseImport("../dist/plugin.js");
+runtime.controls.registerPlugin(plugin, {jupyter: {serverSettings: {baseUrl: "http://localhost:8888"}}});
 runtime.controls.removeCell("nbgrader-init-cell");
 `
         }, ...content.cells]
