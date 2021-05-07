@@ -23,6 +23,7 @@ import { graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit-html";
 import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
 import { getJupyterPlugin } from "./jupyter";
+import { getPythonExecutionMode } from "./state";
 
 declare const runtime: Runtime;
 declare const html: typeof lithtml.html;
@@ -49,7 +50,10 @@ export class GraderCellHandler implements CellHandler {
    */
   private cachedPointCount = 1;
 
-  private useJupyterBackend = false;
+  private get useJupyterBackend() {
+    return getPythonExecutionMode() === "jupyter";
+  }
+
   private jupyterOutputArea?: OutputArea;
 
   private graderType: GraderCellType;

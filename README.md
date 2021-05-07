@@ -11,6 +11,16 @@ npm run build
 http-server --port 8080 --cors
 ```
 
+To connect to a local Jupyter Kernel Gateway, run:
+
+```shell
+KG_ALLOW_METHODS="*" \
+jupyter kernelgateway \
+  --KernelGatewayApp.allow_origin="https://unpkg.com" \
+  --KernelGatewayApp.allow_headers="authorization,content-type,x-xsrftoken" \
+  --JupyterWebsocketPersonality.list_kernels=True
+```
+
 
 ## Development
 

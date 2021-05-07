@@ -2,6 +2,7 @@ import { TemplateResult } from "lit-element";
 import { Runtime } from "starboard-notebook/dist/src/types";
 import { registerJupyterPlugin } from "../jupyter";
 import { GraderPluginOpts } from "../plugin";
+import { getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../state";
 
 const LitElement = (window.runtime as Runtime).exports.libraries.LitElement;
 const html = LitElement.html;
@@ -11,11 +12,22 @@ const runtimeDescriptions = {
   pyodide: "Pyodide (in-browser Python)",
 };
 
+type JupyterPluginLoadStatus = "unstarted" | "loading" | "error-during-loading" | "loaded";
+type RunningAllCellsStatus = "unstarted" | "running" | "success" | "fail";
+
 @LitElement.customElement("starboard-grader-bar")
 export class StarboardGraderBar extends LitElement.LitElement {
-  private executionMode: "jupyter" | "pyodide" = "pyodide";
+
+  set executionMode(val: PythonGraderCellExecutionMode) {
+    setPythonExecutionMode(val);
+  }
+  get executionMode(){
+    return getPythonExecutionMode();
+  }
+
   private opts: GraderPluginOpts;
-  private jupyterPluginStatus: "unstarted" | "loading" | "error-during-loading" | "loaded" = "unstarted";
+  private jupyterPluginStatus: JupyterPluginLoadStatus = "unstarted";
+  private runningAllCellsStatus: RunningAllCellsStatus = "unstarted";
   private runtime: Runtime;
 
   constructor(opts: GraderPluginOpts, runtime: Runtime) {
@@ -24,7 +36,10 @@ export class StarboardGraderBar extends LitElement.LitElement {
     this.runtime = runtime;
 
     if (this.opts.jupyter.serverSettings === undefined) {
-      this.opts.jupyter.serverSettings = { baseUrl: "http://localhost:8888", token: "" };
+      this.opts.jupyter.serverSettings = {
+        baseUrl: "http://localhost:8888",
+        token: "",
+      };
     }
   }
 
@@ -34,6 +49,11 @@ export class StarboardGraderBar extends LitElement.LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+  }
+
+  private setRunningAllCellsStatus(status: RunningAllCellsStatus) {
+    this.runningAllCellsStatus = status;
+    this.performUpdate();
   }
 
   async enableJupyter(event: Event) {
@@ -56,15 +76,17 @@ export class StarboardGraderBar extends LitElement.LitElement {
   }
 
   switchExecutionMode() {
-    this.executionMode = this.executionMode === "jupyter" ? "jupyter" : "pyodide";
+    this.executionMode = this.executionMode === "jupyter" ? "pyodide" : "jupyter";
     this.performUpdate();
   }
 
   private async runAllCells() {
+    this.setRunningAllCellsStatus("running");
     try {
-      this.runtime.controls.runAllCells({});
+      await this.runtime.controls.runAllCells({});
+      this.setRunningAllCellsStatus("success");
     } catch (e) {
-      console.error("ERR CAUGHT", e);
+      this.setRunningAllCellsStatus("fail");
       throw e;
     }
   }
@@ -73,6 +95,9 @@ export class StarboardGraderBar extends LitElement.LitElement {
     let content: TemplateResult;
     if (this.jupyterPluginStatus === "unstarted") {
       content = html` <form @submit=${(e: Event) => this.enableJupyter(e)}>
+        <div class="form-text">
+          You can connect to a running Jupyter kernel to run Python assignment cells on a remote machine.
+        </div>
         <div class="input-group flex-nowrap">
           <input
             name="jupyter-server-url"
@@ -92,14 +117,24 @@ export class StarboardGraderBar extends LitElement.LitElement {
         ❌ Something went wrong loading the plugin, please check your browser's console for details.
       </div>`;
     } else {
-      // content = html`<div>
-      //     ${this.executionMode === "pyodide"
-      //     ? html`<button class="btn btn-secondary btn-small" @click=${() => this.switchExecutionMode()}>Switch to Jupyter for running cells.</button>`
-      //     : html`<button class="btn btn-secondary btn-small" @click=${() => this.switchExecutionMode()}>Switch to in-browser Python.</button>`
-      //     }
-      // </div>`
-      content = html``;
+      content = html`<div>
+          ${this.executionMode === "pyodide"
+          ? html`<button class="btn btn-secondary btn-sm" @click=${() => this.switchExecutionMode()}>Switch to Jupyter for running cells.</button>`
+          : html`<button class="btn btn-secondary btn-sm" @click=${() => this.switchExecutionMode()}>Switch to in-browser Python.</button>`
+          }
+      </div>`
     }
+
+    let runAllIndicator = undefined;
+
+    if (this.runningAllCellsStatus === "fail") {
+      runAllIndicator = html`<span class="badge bg-warning">❌ Cell error, see below</span>`;
+    } else if (this.runningAllCellsStatus === "success") {
+      runAllIndicator = html`<span class="badge bg-success">✅ Executed without errors</span>`;
+    } else if (this.runningAllCellsStatus === "running") {
+      runAllIndicator = html`<span class="badge bg-primary">⚙️ Running all cells..</span>`;
+    }
+
     return html`
       <section class="starboard-grader-interface py-2 px-3 my-2">
         <details>
@@ -115,11 +150,14 @@ export class StarboardGraderBar extends LitElement.LitElement {
             </div>
           </summary>
 
-          <div class="d-flex mt-2">
-            <div class="row">
-              <button @click=${() => this.runAllCells()} class="btn btn-primary btn-sm">Run all cells</button>
+          <div class="d-flex flex-column mt-2">
+            <div class="d-flex">
+              <button @click=${() => this.runAllCells()} class="btn btn-primary btn-sm me-2">Run all cells</button>
+              ${runAllIndicator}
             </div>
-            ${content}
+            <div class="d-flex mt-2">
+              ${content}
+            </div>
           </div>
           <div class="jupyter-plugin-mount"></div>
         </details>
