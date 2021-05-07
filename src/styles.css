@@ -1,113 +1,138 @@
 .grader-cell {
-    border: 3px solid #fff;
-    background-color: #fafafa;
-    padding: 0.8em;
-    border-radius: 6px;
-    border-top-left-radius: 0;
+  border: 3px solid #fff;
+  background-color: #fafafa;
+  padding: 0.8em;
+  border-radius: 6px;
+  border-top-left-radius: 0;
 }
 
 .grader-cell-top-bar {
-    margin-bottom: 1em;
+  margin-bottom: 1em;
 }
 
 .grader-cell pre {
-    padding: 0 1em;
-    background-color: #f2f2f2;
-    border-left: 4px solid #d0d0d0;
+  padding: 0 1em;
+  background-color: #f2f2f2;
+  border-left: 4px solid #d0d0d0;
 }
 
 .grader-code-feedback-bar {
-    border: 1px solid #999;
-    background-color: #fafafa;
-    padding: 0.2em 0.4em;
-    font-size: 0.8em;
+  border: 1px solid #999;
+  background-color: #fafafa;
+  padding: 0.2em 0.4em;
+  font-size: 0.8em;
 }
-.grader-code-feedback-bar.success,  .grader-code-feedback-bar.test-success{
-    border: 1px solid #00ce6e;
-    background-color: #baedc0;
-}
-
-.grader-code-feedback-bar.fail, .grader-code-feedback-bar.test-fail {
-    border: 1px solid #d20d0d;
-    background-color: #eba0ac;
+.grader-code-feedback-bar.success,
+.grader-code-feedback-bar.test-success {
+  border: 1px solid #00ce6e;
+  background-color: #baedc0;
 }
 
-.grader-code-feedback-bar.running, .grader-code-feedback-bar.running-setup {
-    border: 1px solid #ceff93;
-    background-color: #e4f6ff;
+.grader-code-feedback-bar.fail,
+.grader-code-feedback-bar.test-fail {
+  border: 1px solid #d20d0d;
+  background-color: #eba0ac;
+}
+
+.grader-code-feedback-bar.running,
+.grader-code-feedback-bar.running-setup {
+  border: 1px solid #ceff93;
+  background-color: #e4f6ff;
 }
 
 .grader-pill {
-    padding: 0.16em 0.6em;
-    border-radius: 9px;
-    background-color: var(--brand-color);
-    width: max-content;
-    margin: 0.4em 0.4em 0.4em 0;
-    color: #fff;
-    transition: filter ease-in-out 0.15s;
-    border: 0;
+  padding: 0.16em 0.6em;
+  border-radius: 9px;
+  background-color: var(--brand-color);
+  width: max-content;
+  margin: 0.4em 0.4em 0.4em 0;
+  color: #fff;
+  transition: filter ease-in-out 0.15s;
+  border: 0;
 }
 
 .grader-pill.expanded {
-    margin-bottom: 0;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .grader-controls {
-    display: flex;
-    align-items: baseline;
+  display: flex;
+  align-items: baseline;
 }
 
 .grader-controls * .btn {
-    background-color: #fefefe;
-    border-color: #6c757d;
+  background-color: #fefefe;
+  border-color: #6c757d;
 }
 
 .grader-controls * .btn:hover {
-    filter: brightness(0.95);
+  filter: brightness(0.95);
 }
 
 .grader-controls * .btn.active {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .grader-pill:hover {
-    filter: brightness(1.03);
+  filter: brightness(1.03);
 }
 
-.grader-pill.manual-task, .btn.manual-task.active {
-    background-color: #ceff93;
-    color: #313131;
+.grader-pill.manual-task,
+.btn.manual-task.active {
+  background-color: #ceff93;
+  color: #313131;
 }
 
 .grader-cell.manual-task {
-    border-color: #ceff93;
+  border-color: #ceff93;
 }
 
-.grader-pill.manual-answer, .btn.manual-answer.active {
-    background-color: #ffe6ab;
-    color: #313131;
+.grader-pill.manual-answer,
+.btn.manual-answer.active {
+  background-color: #ffe6ab;
+  color: #313131;
 }
 
 .grader-cell.manual-answer {
-    border-color: #ffe6ab;
+  border-color: #ffe6ab;
 }
 
-.grader-pill.autograder-answer, .btn.autograder-answer.active {
-    background-color: #4c86e1;
-    color: #fff;
+.grader-pill.autograder-answer,
+.btn.autograder-answer.active {
+  background-color: #4c86e1;
+  color: #fff;
 }
 
 .grader-cell.autograder-answer {
-    border-color: #4c86e1;
+  border-color: #4c86e1;
 }
 
-.grader-pill.autograder-tests, .btn.autograder-tests.active {
-    background-color: #995fdf;
-    color: #fff;
+.grader-pill.autograder-tests,
+.btn.autograder-tests.active {
+  background-color: #995fdf;
+  color: #fff;
 }
 
 .grader-cell.autograder-tests {
-    border-color: #995fdf;
+  border-color: #995fdf;
+}
+
+starboard-grader-bar {
+  display: grid;
+  grid-template-columns: [full-width-start] auto [margin-left-start] var(--cell-margin-left) [margin-left-end content-start] minmax(
+      auto,
+      calc(min(var(--cell-base-width), 100% - var(--cell-margin-left) - var(--cell-margin-right)))
+    ) [content-end margin-right-start] var(--cell-margin-right) [margin-right-end] auto [full-width-end];
+}
+
+.starboard-grader-interface {
+  grid-column: content-start / content-end;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+.x-small {
+  font-size: 0.625em;
 }
