@@ -311,6 +311,7 @@ export class GraderCellHandler implements CellHandler {
 
       // Cell output value
       let val = undefined;
+      let err = undefined;
 
       if (this.useJupyterBackend) {
         await jupyterPlugin.exports.getGlobalKernelManager().runCode({ code: codeToRun }, this.jupyterOutputArea!);
@@ -322,6 +323,7 @@ export class GraderCellHandler implements CellHandler {
           val = await pythonPlugin.runStarboardPython(this.runtime, codeToRun, outputMount);
         } catch (e) {
           status = "error";
+          err = e;
         }
       }
 
@@ -339,6 +341,9 @@ export class GraderCellHandler implements CellHandler {
         }
         this.codeRunnerFeedbackElement.setRunResult(runnerStatusCode);
       }
+
+      if (err !== undefined) throw err;
+
       return val;
     }
   }
@@ -349,6 +354,12 @@ export class GraderCellHandler implements CellHandler {
 
   async dispose() {
     this.editor?.remove();
+  }
+
+  clear() {
+    const outputMount = this.codeRunnerFeedbackElement.getOutputElement();
+    this.codeRunnerFeedbackElement.reset();
+    lithtml.render(lithtml.html``, outputMount);
   }
 }
 

@@ -1,5 +1,5 @@
 import { convertJupyterStringToStarboardString, convertStarboardStringToJupyterString } from "https://cdn.skypack.dev/jupystar";
-import { StarboardNotebookIFrame } from "https://cdn.skypack.dev/starboard-wrap@0.2.5";
+import { StarboardEmbed } from "https://cdn.skypack.dev/starboard-wrap@0.3.1";
 import { upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell } from "../dist/converter.js";
 
 let currentStarboardNotebookContent = `
@@ -188,11 +188,11 @@ function createNotebook(content) {
     const href = window.location.href;
     const baseUrl = href.substring(0, href.lastIndexOf('/')) + "/";
 
-    const el = new StarboardNotebookIFrame({
+    const el = new StarboardEmbed({
         // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
         // have a clean way to load plugins at runtime level yet, coming soon!
         notebookContent: prependPluginLoaderCell(content),
-        src: "https://unpkg.com/starboard-notebook@0.9.1/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.9.3/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,
 
@@ -204,7 +204,6 @@ function createNotebook(content) {
             updateContent(payload.content);
         }
     });
-    el.style.width = "100%";
     mount.appendChild(el);
 }
 

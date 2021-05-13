@@ -10,7 +10,7 @@
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
     "starboard-jupyter": "^0.2.7",
-    "starboard-notebook": "^0.9.1"
+    "starboard-notebook": "^0.9.3"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.1.0",

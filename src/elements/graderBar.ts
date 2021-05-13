@@ -17,11 +17,10 @@ type RunningAllCellsStatus = "unstarted" | "running" | "success" | "fail";
 
 @LitElement.customElement("starboard-grader-bar")
 export class StarboardGraderBar extends LitElement.LitElement {
-
   set executionMode(val: PythonGraderCellExecutionMode) {
     setPythonExecutionMode(val);
   }
-  get executionMode(){
+  get executionMode() {
     return getPythonExecutionMode();
   }
 
@@ -81,6 +80,12 @@ export class StarboardGraderBar extends LitElement.LitElement {
   }
 
   private async runAllCells() {
+    try {
+      this.runtime.controls.clearAllCells();
+    } catch (e) {
+      console.error("Failed to clear all cells:", e);
+    }
+
     this.setRunningAllCellsStatus("running");
     try {
       await this.runtime.controls.runAllCells({});
@@ -111,28 +116,31 @@ export class StarboardGraderBar extends LitElement.LitElement {
         </div>
       </form>`;
     } else if (this.jupyterPluginStatus === "loading") {
-      content = html`<div class="alert bg-light text-dark" style="width: max-content">⌛ Jupyter Plugin loading</div>`;
+      content = html`<div class="alert alert-info" style="width: max-content">⌛ Jupyter Plugin loading</div>`;
     } else if (this.jupyterPluginStatus === "error-during-loading") {
       content = html`<div class="alert alert-error" style="width: max-content">
         ❌ Something went wrong loading the plugin, please check your browser's console for details.
       </div>`;
     } else {
       content = html`<div>
-          ${this.executionMode === "pyodide"
-          ? html`<button class="btn btn-secondary btn-sm" @click=${() => this.switchExecutionMode()}>Switch to Jupyter for running cells.</button>`
-          : html`<button class="btn btn-secondary btn-sm" @click=${() => this.switchExecutionMode()}>Switch to in-browser Python.</button>`
-          }
-      </div>`
+        ${this.executionMode === "pyodide"
+          ? html`<button class="btn btn-secondary btn-sm" @click=${() => this.switchExecutionMode()}>
+              Switch to Jupyter for running cells.
+            </button>`
+          : html`<button class="btn btn-secondary btn-sm" @click=${() => this.switchExecutionMode()}>
+              Switch to in-browser Python.
+            </button>`}
+      </div>`;
     }
 
     let runAllIndicator = undefined;
 
     if (this.runningAllCellsStatus === "fail") {
-      runAllIndicator = html`<span class="badge bg-warning">❌ Cell error, see below</span>`;
+      runAllIndicator = html`<span class="badge bg-danger">❌ Cell error</span>`;
     } else if (this.runningAllCellsStatus === "success") {
-      runAllIndicator = html`<span class="badge bg-success">✅ Executed without errors</span>`;
+      runAllIndicator = html`<span class="badge bg-success">Executed without errors</span>`;
     } else if (this.runningAllCellsStatus === "running") {
-      runAllIndicator = html`<span class="badge bg-primary">⚙️ Running all cells..</span>`;
+      runAllIndicator = html`<span class="badge bg-light text-dark">⚙️ Running all cells..</span>`;
     }
 
     return html`
@@ -144,7 +152,7 @@ export class StarboardGraderBar extends LitElement.LitElement {
               <small class="x-small">Click to expand</small>
             </div>
             <div>
-              <span class="badge ${this.executionMode === "jupyter" ? "bg-success" : "bg-primary"}">
+              <span class="badge ${this.executionMode === "jupyter" ? "bg-info" : "bg-secondary"}">
                 ${runtimeDescriptions[this.executionMode]}
               </span>
             </div>
@@ -152,12 +160,10 @@ export class StarboardGraderBar extends LitElement.LitElement {
 
           <div class="d-flex flex-column mt-2">
             <div class="d-flex">
-              <button @click=${() => this.runAllCells()} class="btn btn-primary btn-sm me-2">Run all cells</button>
-              ${runAllIndicator}
+              <button @click=${() => this.runAllCells()} class="btn btn-secondary btn-sm me-2">Run all cells</button>
+              <div>${runAllIndicator}</div>
             </div>
-            <div class="d-flex mt-2">
-              ${content}
-            </div>
+            <div class="d-flex mt-2">${content}</div>
           </div>
           <div class="jupyter-plugin-mount"></div>
         </details>
