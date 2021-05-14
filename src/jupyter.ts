@@ -10,7 +10,7 @@ let singletonPlugin: undefined | typeof JPlugin = undefined;
 
 export async function registerJupyterPlugin(
   opts: JupyterPluginSettings,
-  pluginUrl: string = "https://unpkg.com/starboard-jupyter@0.2.7/dist/index.js"
+  pluginUrl: string = "https://unpkg.com/starboard-jupyter@0.2.8/dist/index.js"
 ) {
   const { plugin } = await import(pluginUrl);
   singletonPlugin = plugin;
