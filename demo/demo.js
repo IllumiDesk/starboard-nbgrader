@@ -1,6 +1,6 @@
-import {convertJupyterStringToStarboardString, convertStarboardStringToJupyterString} from "https://cdn.skypack.dev/jupystar";
-import {StarboardNotebookIFrame} from "https://cdn.skypack.dev/starboard-wrap@0.2.5";
-import {upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell} from "../dist/converter.js";
+import { convertJupyterStringToStarboardString, convertStarboardStringToJupyterString } from "https://cdn.skypack.dev/jupystar";
+import { StarboardEmbed } from "https://cdn.skypack.dev/starboard-wrap@0.3.1";
+import { upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell } from "../dist/converter.js";
 
 let currentStarboardNotebookContent = `
 # %%--- [javascript]
@@ -161,19 +161,19 @@ function readFileAsText(file) {
             resolve(event.target.result);
         })
         reader.readAsText(file);
-    }) 
+    })
 }
 
 function downloadIpynbAsFile() {
     var element = document.createElement('a');
     element.setAttribute("href", 'data:text/plain;charset=utf-8,' + encodeURIComponent(currentJupyterNotebookContent));
     element.setAttribute('download', "starboard-grader-output.ipynb");
-  
+
     element.style.display = 'none';
     document.body.appendChild(element);
-  
+
     element.click();
-  
+
     document.body.removeChild(element);
 }
 
@@ -188,11 +188,11 @@ function createNotebook(content) {
     const href = window.location.href;
     const baseUrl = href.substring(0, href.lastIndexOf('/')) + "/";
 
-    const el = new StarboardNotebookIFrame({
+    const el = new StarboardEmbed({
         // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
         // have a clean way to load plugins at runtime level yet, coming soon!
         notebookContent: prependPluginLoaderCell(content),
-        src: "https://unpkg.com/starboard-notebook@0.8.10/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.9.3/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,
 
@@ -204,7 +204,6 @@ function createNotebook(content) {
             updateContent(payload.content);
         }
     });
-    el.style.width = "100%";
     mount.appendChild(el);
 }
 

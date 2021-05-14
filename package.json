@@ -1,6 +1,6 @@
 {
   "name": "@illumidesk/starboard-nbgrader",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "description": "Starboard and nbgrader proof of concept",
   "main": "dist/index.js",
   "dependencies": {
@@ -9,19 +9,24 @@
     "rollup": "^2.41.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
-    "starboard-notebook": "^0.8.10"
+    "starboard-jupyter": "^0.2.8",
+    "starboard-notebook": "^0.9.3"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-node-resolve": "^11.2.0",
     "clean-css": "^5.1.1",
+    "esbuild": "^0.11.16",
+    "prettier": "^2.2.1",
     "rimraf": "^3.0.2",
+    "rollup-plugin-esbuild": "^4.2.3",
     "typescript": "^4.2.3"
   },
   "scripts": {
     "build": "rollup -c && tsc",
-    "dev": "rollup -c --watch",
+    "start": "rollup -c --watch",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier -w src",
     "prepublishOnly": "rimraf dist && npm i && npm run build"
   },
   "repository": {
