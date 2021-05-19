@@ -1,22 +1,19 @@
-import { TemplateResult } from "lit-element";
 import { Runtime } from "starboard-notebook/dist/src/types";
 import { registerJupyterPlugin } from "../jupyter";
 import { GraderPluginOpts } from "../plugin";
 import { getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../state";
 
-const LitElement = (window.runtime as Runtime).exports.libraries.LitElement;
-const html = LitElement.html;
+import { TemplateResult } from "lit";
+import { customElement } from "lit/decorators.js";
 
-const runtimeDescriptions = {
-  jupyter: "Jupyter",
-  pyodide: "Pyodide",
-};
+const lit = (window.runtime as Runtime).exports.libraries.lit;
+const html = lit.html;
 
 type JupyterPluginLoadStatus = "unstarted" | "loading" | "error-during-loading" | "loaded";
 type RunningAllCellsStatus = "unstarted" | "running" | "success" | "fail";
 
-@LitElement.customElement("starboard-grader-bar")
-export class StarboardGraderBar extends LitElement.LitElement {
+@customElement("starboard-grader-bar")
+export class StarboardGraderBar extends lit.LitElement {
   set executionMode(val: PythonGraderCellExecutionMode) {
     setPythonExecutionMode(val);
   }
@@ -52,7 +49,7 @@ export class StarboardGraderBar extends LitElement.LitElement {
 
   private setRunningAllCellsStatus(status: RunningAllCellsStatus) {
     this.runningAllCellsStatus = status;
-    this.performUpdate();
+    this.requestUpdate();
   }
 
   async enableJupyter(event: Event) {
@@ -62,16 +59,16 @@ export class StarboardGraderBar extends LitElement.LitElement {
     ) as HTMLInputElement).value;
     this.opts.jupyter.mount = (this.querySelector(".jupyter-plugin-mount") as HTMLElement) || undefined;
     this.jupyterPluginStatus = "loading";
-    this.performUpdate();
+    this.requestUpdate();
     try {
       await registerJupyterPlugin(this.opts.jupyter, this.opts.jupyterPluginUrl);
     } catch (e) {
       this.jupyterPluginStatus = "error-during-loading";
-      this.performUpdate();
+      this.requestUpdate();
       throw e;
     }
     this.jupyterPluginStatus = "loaded";
-    this.performUpdate();
+    this.requestUpdate();
   }
 
   switchExecutionMode() {
@@ -138,7 +135,9 @@ export class StarboardGraderBar extends LitElement.LitElement {
     if (this.runningAllCellsStatus === "fail") {
       runAllIndicator = html`<span class="badge bg-danger">❌ Cell error</span>`;
     } else if (this.runningAllCellsStatus === "success") {
-      runAllIndicator = html`<span class="badge bg-success">Ran all cells without errors</span>`;
+      runAllIndicator = html`<span class="badge bg-success"
+        ><span class="bi bi-check-circle me-2"></span>Ran all cells without errors</span
+      >`;
     } else if (this.runningAllCellsStatus === "running") {
       runAllIndicator = html`<span class="badge bg-light text-dark">⚙️ Running all cells..</span>`;
     }
@@ -170,8 +169,15 @@ export class StarboardGraderBar extends LitElement.LitElement {
                     </button>`}
               </div>
               <div>
-                <span class="badge ${this.executionMode === "jupyter" ? "bg-info" : "bg-secondary"}">
-                  ${runtimeDescriptions[this.executionMode]}
+                <span
+                  class="badge ${this.executionMode === "jupyter" ? "bg-dark" : "bg-secondary"}"
+                  title="${this.executionMode === "jupyter"
+                    ? "Python cells will be run on a remote Jupyter machine"
+                    : "Python cells will be run in your browser"}"
+                >
+                  ${this.executionMode === "jupyter"
+                    ? html`<span class="bi bi-cloud me-1"></span> Jupyter`
+                    : html` Pyodide`}
                 </span>
               </div>
             </div>

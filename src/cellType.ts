@@ -20,7 +20,7 @@ import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/
 
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 import { graderMetadataToNBGraderCellType } from "./graderUtils";
-import { TemplateResult } from "lit-html";
+import { TemplateResult } from "lit";
 import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
 import { getJupyterPlugin } from "./jupyter";
 import { getPythonExecutionMode } from "./state";

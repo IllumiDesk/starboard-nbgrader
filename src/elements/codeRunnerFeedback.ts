@@ -1,4 +1,5 @@
-import { LitElement, LitHtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { lit } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { customElement, query } from "lit/decorators.js";
 
 export type CodeRunnerResult =
   | "empty"
@@ -10,14 +11,14 @@ export type CodeRunnerResult =
   | "running-setup"
   | "abort";
 
-const html = LitHtml.html;
+const html = lit.html;
 
-@LitElement.customElement("grader-code-feedback")
-export class CodeRunnerFeedbackElement extends LitElement.LitElement {
+@customElement("grader-code-feedback")
+export class CodeRunnerFeedbackElement extends lit.LitElement {
   showOutput: boolean = true;
   result: CodeRunnerResult = "empty";
 
-  @LitElement.query(".grader-code-cell-output")
+  @query(".grader-code-cell-output")
   outputElement!: HTMLElement;
 
   constructor() {
@@ -30,12 +31,12 @@ export class CodeRunnerFeedbackElement extends LitElement.LitElement {
 
   reset() {
     this.result = "empty";
-    this.performUpdate();
+    this.requestUpdate();
   }
 
   setRunResult(c: CodeRunnerResult) {
     this.result = c;
-    this.performUpdate();
+    this.requestUpdate();
   }
 
   /**

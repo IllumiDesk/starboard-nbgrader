@@ -8,6 +8,6 @@ export function registerStudentLockedCellProperty() {
     textEnabled: "Locked for students: they won't be able to edit this cell.",
     textDisabled: "Lock cell for students (stop them from editing)",
     cellProperty: "nbgrader_locked",
-    icon: () => "STUDENT LOCK",
+    icon: "bi bi-key-fill",
   });
 }
