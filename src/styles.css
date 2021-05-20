@@ -7,7 +7,7 @@
 }
 
 .grader-cell-top-bar {
-  margin-bottom: 1em;
+  margin-bottom: 2px;
 }
 
 .grader-cell pre {
@@ -46,7 +46,7 @@
   border-radius: 9px;
   background-color: var(--brand-color);
   width: max-content;
-  margin: 0.4em 0.4em 0.4em 0;
+  margin: 0.4em 0.4em 2px 0;
   color: #fff;
   transition: filter ease-in-out 0.15s;
   border: 0;
@@ -114,6 +114,24 @@
 
 .grader-cell.autograder-tests {
   border-color: #995fdf;
+}
+
+.grader-pill.markdown, .btn.markdown.active {
+  background-color: #eee;
+  color: #313131;
+}
+
+.grader-cell.markdown {
+  border-color: #eee;
+}
+
+.grader-pill.python, .btn.python.active {
+  background-color: #eee;
+  color: #313131;
+}
+
+.grader-cell.python {
+  border-color: #eee;
 }
 
 starboard-grader-bar {

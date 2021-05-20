@@ -21,15 +21,31 @@ export function upgradeNBGraderCells(nb: NotebookContent | string) {
 
   nb.cells.forEach((c) => {
     const md = c.metadata.nbgrader as NBGraderMetadata;
+    const originalCellType = c.cellType as "markdown" | "python";
     if (md) {
-      if (!md.grade && md.locked && !md.task && !md.solution) {
-        // This cell is only "locked", it is not a "task" per say.
-        c.metadata.properties.nbgrader_locked = true;
+      // Has NBGrader metadata
+      if (!md.grade && !md.task && !md.solution) {
+        // This is a "basic" cell.
+        (c.metadata.starboard_grader as StarboardGraderMetadata) = {
+          original_cell_type: originalCellType,
+          is_basic_cell: true,
+        };
+        // c.metadata.properties.nbgrader_locked = md.locked;
       } else {
         (c.metadata.starboard_grader as StarboardGraderMetadata) = {
-          original_cell_type: c.cellType as "markdown" | "python",
+          original_cell_type: originalCellType,
+          is_basic_cell: false,
         };
+      }
+      c.cellType = "grader";
+    } else {
+      // We translate non-nbgrader cells too to their grader equivalent.
+      if (c.cellType === "markdown" || c.cellType === "python") {
         c.cellType = "grader";
+        c.metadata.starboard_grader = {
+          origin_cell_type: c.cellType,
+          is_basic_cell: true,
+        };
       }
     }
   });
@@ -37,22 +53,17 @@ export function upgradeNBGraderCells(nb: NotebookContent | string) {
   return notebookContentToText(nb);
 }
 
-export function prependPluginLoaderCell(nb: string) {
+export function prependPluginLoaderMetadata(nb: string, opts: { pluginUrl: string; jupyterBaseUrl: string }) {
   const content = textToNotebookContent(nb);
+  content.metadata.starboard = content.metadata.starboard || {};
 
-  content.cells = [
-    {
-      cellType: "javascript",
-      metadata: { id: "nbgrader-init-cell", properties: { run_on_load: true } },
-      id: "nbgrader-init-cell",
-      textContent: `const baseImport = (path) => import(document.querySelector("base").href + path);
-const {plugin} = await baseImport("../dist/plugin.js");
-runtime.controls.registerPlugin(plugin, {jupyter: {serverSettings: {baseUrl: "http://localhost:8888"}}});
-runtime.controls.removeCell("nbgrader-init-cell");
-`,
-    },
-    ...content.cells,
-  ];
+  if (!content.metadata.starboard.plugins!) {
+    content.metadata.starboard.plugins = [];
+  }
+  content.metadata.starboard!.plugins.push({
+    src: opts.pluginUrl,
+    args: { jupyter: { serverSettings: { baseUrl: opts.jupyterBaseUrl } } },
+  });
 
   return notebookContentToText(content);
 }
@@ -80,7 +91,8 @@ export function preprocessGraderCellsForJupystar(nb: NotebookContent | string) {
 
       c.cellType = md === undefined ? "python" : md.original_cell_type;
       delete (c.metadata as any).starboard_grader;
-    } else if (c.metadata.properties.nbgrader_locked) {
+    } /* Note(gzuidhof): nbgrader_locked is probably not necessary anymore.
+    else if (c.metadata.properties.nbgrader_locked) {
       const md: NBGraderMetadata = {
         locked: true,
         grade_id: c.id,
@@ -90,7 +102,7 @@ export function preprocessGraderCellsForJupystar(nb: NotebookContent | string) {
         task: false,
       };
       c.metadata.nbgrader = md;
-    }
+    }*/
   });
 
   return notebookContentToText(nb);

@@ -1,11 +1,5 @@
 import { Cell } from "starboard-notebook/dist/src/types";
-import {
-  CellElements,
-  CellHandler,
-  CellHandlerAttachParameters,
-  ControlButton,
-  Runtime,
-} from "starboard-notebook/dist/src/types";
+import { CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime } from "starboard-notebook/dist/src/types";
 
 import {
   convertNBGraderType,
@@ -19,7 +13,7 @@ import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
 
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
-import { graderMetadataToNBGraderCellType } from "./graderUtils";
+import { graderCellTypeLockableness, graderMetadataToNBGraderCellType } from "./graderUtils";
 import { TemplateResult } from "lit";
 import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
 import { getJupyterPlugin } from "./jupyter";
@@ -79,10 +73,14 @@ export class GraderCellHandler implements CellHandler {
     if (this.getNBGraderMetadata() === undefined) {
       this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
     }
-    this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
+    const starboardGraderMetadata = this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined;
+    if (starboardGraderMetadata?.is_basic_cell) {
+      this.graderType = starboardGraderMetadata!.original_cell_type;
+    } else {
+      this.graderType = graderMetadataToNBGraderCellType(this.getNBGraderMetadata());
+    }
     this.codeRunnerFeedbackElement = new CodeRunnerFeedbackElement();
 
-    const starboardGraderMetadata = this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined;
     if (!starboardGraderMetadata) {
       this.underlyingCellType = "python";
     } else {
@@ -111,9 +109,7 @@ export class GraderCellHandler implements CellHandler {
             icon: icons.GearsIcon,
             tooltip: "Downloading and initializing Pyodide",
             callback: () => {
-              alert(
-                "Loading Python runtime. It's fairly large so it may take some time. It will be cached for next time."
-              );
+              alert("Loading Python runtime. It's fairly large so it may take some time. It will be cached for next time.");
             },
           },
           ...buttons,
@@ -153,8 +149,10 @@ export class GraderCellHandler implements CellHandler {
 
     convertNBGraderType(md, newType, this.cachedPointCount);
     // These types can't be markdown-based.
-    if (newType === "autograder-answer" || newType === "autograder-tests") {
+    if (newType === "autograder-answer" || newType === "autograder-tests" || newType === "python") {
       this.changeLanguage("python");
+    } else if (newType === "markdown") {
+      this.changeLanguage("markdown");
     }
     this.updateRender();
   }
@@ -189,70 +187,120 @@ export class GraderCellHandler implements CellHandler {
     this.updateRender();
   }
 
+  private toggleStudentLock(event: InputEvent) {
+    const md = this.getNBGraderMetadata();
+    md.locked = (event.target! as HTMLInputElement).value === "on";
+    this.updateRender();
+  }
+
   topTemplate() {
     const md = this.getNBGraderMetadata();
-
     const graderDefinition = DEFINITIONS[this.graderType];
-
     let topbarControls: TemplateResult | undefined;
+
+    const lockableness = graderCellTypeLockableness(this.graderType);
 
     if (this.topbarExpanded) {
       topbarControls = html` <div class="grader-cell grader-cell-top-bar ${this.graderType}">
+
+        
         <div class="grader-controls">
+
+          <!-- Markdown vs Python selector -->
           <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
-            ${Object.entries(DEFINITIONS).map(
-              ([type, def]) =>
-                html`
+            <button
+              @click=${() => this.changeNBType("markdown")}
+              class="btn btn-sm ${this.graderType} ${
+        this.graderType === "markdown" || this.underlyingCellType === "markdown" ? "active" : ""
+      }"
+            >
+              📃 Markdown
+            </button>
+            <button
+              @click=${() => this.changeNBType("python")}
+              class="btn btn-sm ${this.graderType} ${this.graderType === "python" || this.underlyingCellType === "python" ? "active" : ""}"
+            >
+              🐍 Python
+            </button>
+          </div>
+
+           <!-- Grader type selector -->
+            <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
+              ${Object.entries(DEFINITIONS).map(([type, def]) => {
+                // Markdown and python are rendered independently above.
+                if (type === "markdown" || type === "python") return undefined;
+
+                const isDisabled = def.supportedCellTypes.indexOf(this.underlyingCellType) === -1;
+
+                let classes = "";
+                if (this.graderType === type) classes += " active";
+                const styles = `pointer-events: auto; ${isDisabled ? "cursor: not-allowed" : ""}`;
+
+                let title = isDisabled ? `A ${this.graderType} cell can't be an ${def.name}` : "";
+
+                return html`
                   <button
+                    ?disabled=${isDisabled}
+                    title="${title}"
+                    style=${styles}
                     @click=${() => this.changeNBType(type as GraderCellType)}
-                    class="btn btn-sm ${this.graderType} ${this.graderType === type ? "active" : ""}"
+                    class="btn btn-sm ${this.graderType} ${classes}"
                   >
                     ${def.emoji} ${def.name}
                   </button>
-                `
-            )}
-          </div>
+                `;
+              })}
+            </div>
 
-          ${graderDefinition.hasPoints
-            ? html`
-                ${graderDefinition.hasPoints
-                  ? html` <div class="input-group input-group-sm mb-3" style="max-width: 132px">
-                      <span class="input-group-text">Points</span>
-                      <input
-                        @input="${(e: any) => this.changePointValue(e)}"
-                        type="number"
-                        min="0"
-                        max="999999999999"
-                        placeholder="Points (number equal or greater than 0)"
-                        class="form-control"
-                        value="${md.points || 0}"
-                      />
-                    </div>`
-                  : undefined}
-              `
-            : undefined}
+            ${
+              graderDefinition.hasPoints
+                ? html`
+                    ${graderDefinition.hasPoints
+                      ? html` <div class="input-group input-group-sm mb-3" style="max-width: 132px">
+                          <span class="input-group-text">Points</span>
+                          <input
+                            @input="${(e: any) => this.changePointValue(e)}"
+                            type="number"
+                            min="0"
+                            max="999999999999"
+                            placeholder="Points (number equal or greater than 0)"
+                            class="form-control"
+                            value="${md.points || 0}"
+                          />
+                        </div>`
+                      : undefined}
+                  `
+                : undefined
+            }
 
-          <div class="btn-group btn-sm pe-0" role="group" style="margin-left: auto" aria-label="Cell language">
-            ${graderDefinition.supportedCellTypes.map(
-              (ct) => html` <button
-                @click=${() => this.changeLanguage(ct)}
-                class="btn btn-sm ${this.underlyingCellType === ct ? "active" : ""}"
-              >
-                ${ct}
-              </button>`
-            )}
+            ${(() => {
+              if (lockableness === "never") {
+                return undefined; // Display nothing when the cell is editable by students
+              } else if (lockableness === "always") {
+                return html`<label class="form-check-label ms-auto" title="This cell can not be edited by students">🔒</label>`;
+              }
+
+              return html`<div class="form-check form-switch ms-auto" title="Disable editing of this cell by students">
+                <label class="form-check-label" for="lockEditing">🔒</label>
+                <input
+                  @change=${(evt: InputEvent) => this.toggleStudentLock(evt)}
+                  class="form-check-input mx-1"
+                  type="checkbox"
+                  id="lockEditing"
+                  ?disabled=${lockableness !== "choice"}
+                  ?checked=${this.getNBGraderMetadata().locked}
+                />
+              </div>`;
+            })()}
+
           </div>
+          <p class="mb-0"><small>${graderDefinition.description}</small></p>
         </div>
-
-        <p class="mb-0"><small>${graderDefinition.description}</small></p>
       </div>`;
     }
 
     return html`
-      <button
-        @click=${() => this.toggleExpansion()}
-        class="grader-pill ${this.graderType}${this.topbarExpanded ? " expanded" : ""}"
-      >
+      <button @click=${() => this.toggleExpansion()} class="grader-pill ${this.graderType}${this.topbarExpanded ? " expanded" : ""}">
         <b>${graderDefinition.emoji} ${graderDefinition.name}</b>
         ${graderDefinition.hasPoints
           ? html`<span class="ms-1"><small>(${md.points} point${md.points === 1 ? "" : "s"})</small></span>`

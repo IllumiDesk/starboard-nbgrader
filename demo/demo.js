@@ -1,19 +1,8 @@
 import { convertJupyterStringToStarboardString, convertStarboardStringToJupyterString } from "https://cdn.skypack.dev/jupystar";
 import { StarboardEmbed } from "https://cdn.skypack.dev/starboard-wrap@0.3.2";
-import { upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderCell } from "../dist/converter.js";
+import { upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderMetadata } from "../dist/converter.js";
 
-let currentStarboardNotebookContent = `
-# %%--- [javascript]
-# properties:
-#   run_on_load: true
-# ---%%
-const {initPlugin} = await import("../dist/plugin.js");
-initPlugin();
-
-# %% [grader]
-Hello!
-`;
-
+let currentStarboardNotebookContent = ``;
 
 currentStarboardNotebookContent = `
 ---
@@ -36,9 +25,7 @@ ipynb_metadata:
 jupystar:
   version: 0.2.1
 ---
-# %%--- [markdown]
-# properties:
-#   nbgrader_locked: true
+# %%--- [grader]
 # id: smart-plymouth
 # nbgrader:
 #   grade: false
@@ -47,10 +34,12 @@ jupystar:
 #   schema_version: 3
 #   solution: false
 #   task: false
+# starboard_grader:
+#   original_cell_type: markdown
+#   is_basic_cell: true
 # ---%%
 ## Write a haiku below (1 point)
 # %%--- [grader]
-# properties: {}
 # id: handed-stopping
 # nbgrader:
 #   grade: true
@@ -62,10 +51,10 @@ jupystar:
 #   task: false
 # starboard_grader:
 #   original_cell_type: markdown
+#   is_basic_cell: false
 # ---%%
 Haiku goes here
 # %%--- [grader]
-# properties: {}
 # id: immediate-jumping
 # nbgrader:
 #   grade: false
@@ -77,10 +66,10 @@ Haiku goes here
 #   task: true
 # starboard_grader:
 #   original_cell_type: markdown
+#   is_basic_cell: false
 # ---%%
 Another task.. worth two points, that is spread along multiple cells and manually graded.
 # %%--- [grader]
-# properties: {}
 # id: cooperative-healthcare
 # nbgrader:
 #   grade: false
@@ -91,17 +80,17 @@ Another task.. worth two points, that is spread along multiple cells and manuall
 #   task: false
 # starboard_grader:
 #   original_cell_type: python
+#   is_basic_cell: false
 # ---%%
 def squares(n):
     """Compute the squares of numbers from 1 to n"""
-    
+
     ### BEGIN SOLUTION
     if n < 1:
         raise ValueError("n must be greater than or equal to 1")
     return [i**2 for i in range(1, n+1)]
     ### END SOLUTION
 # %%--- [grader]
-# properties: {}
 # id: processed-pepper
 # nbgrader:
 #   grade: true
@@ -113,8 +102,8 @@ def squares(n):
 #   task: false
 # starboard_grader:
 #   original_cell_type: python
+#   is_basic_cell: false
 # ---%%
-import nose
 from nose.tools import assert_equal
 
 assert_equal(squares(1), [1])
@@ -136,6 +125,7 @@ assert_equal(squares(3), [1, 4, 9])
 #   task: false
 # starboard_grader:
 #   original_cell_type: python
+#   is_basic_cell: false
 # ---%%
 from nose.tools import assert_raises
 assert_raises(ValueError, squares, 0)
@@ -188,10 +178,11 @@ function createNotebook(content) {
     const href = window.location.href;
     const baseUrl = href.substring(0, href.lastIndexOf('/')) + "/";
 
+    const pluginUrl = baseUrl + "../dist/plugin.js";
+    const jupyterBaseUrl = "http://localhost:8888";
+
     const el = new StarboardEmbed({
-        // TODO: we should not need to prepend this loader cell like this, starboard-notebook doesn't
-        // have a clean way to load plugins at runtime level yet, coming soon!
-        notebookContent: prependPluginLoaderCell(content),
+        notebookContent: prependPluginLoaderMetadata(content, { pluginUrl: pluginUrl, jupyterBaseUrl: jupyterBaseUrl }),
         src: "https://unpkg.com/starboard-notebook@0.10.1/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,

@@ -22,3 +22,14 @@ export function graderMetadataToNBGraderCellType(m: NBGraderMetadata | undefined
   console.error("Possibly invalid nbgrader cell metadata:", m);
   return "manual-answer";
 }
+
+// Can the given grader cell type be locked from editing by students?
+export function graderCellTypeLockableness(gct: GraderCellType): "always" | "never" | "choice" {
+  if (gct === "manual-answer" || gct === "autograder-answer") {
+    return "never";
+  } else if (gct === "manual-task" || gct === "autograder-tests") {
+    return "always";
+  } else {
+    return "choice";
+  }
+}
