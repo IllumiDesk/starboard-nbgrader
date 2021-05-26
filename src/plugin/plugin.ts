@@ -1,8 +1,7 @@
 import { Runtime, StarboardPlugin } from "starboard-notebook/dist/src/types";
 import { registerGraderCellType } from "./cellType";
-import { StarboardGraderBar } from "./elements/graderBar";
+import { StarboardGraderBar } from "../elements/graderBar";
 import { JupyterPluginSettings } from "./jupyter";
-import { registerStudentLockedCellProperty } from "./lockedProperty";
 
 export { GraderCellHandler, registerGraderCellType } from "./cellType";
 

@@ -1,7 +1,7 @@
 import { Runtime } from "starboard-notebook/dist/src/types";
-import { registerJupyterPlugin } from "../jupyter";
-import { GraderPluginOpts } from "../plugin";
-import { getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../state";
+import { registerJupyterPlugin } from "../plugin/jupyter";
+import { GraderPluginOpts } from "../plugin/plugin";
+import { getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../plugin/state";
 
 import { TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
@@ -54,9 +54,7 @@ export class StarboardGraderBar extends lit.LitElement {
 
   async enableJupyter(event: Event) {
     event.preventDefault();
-    this.opts.jupyter.serverSettings!.baseUrl = (this.querySelector(
-      'input[name="jupyter-server-url"]'
-    ) as HTMLInputElement).value;
+    this.opts.jupyter.serverSettings!.baseUrl = (this.querySelector('input[name="jupyter-server-url"]') as HTMLInputElement).value;
     this.opts.jupyter.mount = (this.querySelector(".jupyter-plugin-mount") as HTMLElement) || undefined;
     this.jupyterPluginStatus = "loading";
     this.requestUpdate();
@@ -102,9 +100,7 @@ export class StarboardGraderBar extends lit.LitElement {
     let content: TemplateResult;
     if (this.jupyterPluginStatus === "unstarted") {
       content = html` <form class="w-100" @submit=${(e: Event) => this.enableJupyter(e)}>
-        <div class="form-text">
-          You can connect to a running Jupyter kernel to run Python assignment cells on a remote machine.
-        </div>
+        <div class="form-text">You can connect to a running Jupyter kernel to run Python assignment cells on a remote machine.</div>
         <div class="input-group flex-nowrap">
           <input
             name="jupyter-server-url"
@@ -118,9 +114,7 @@ export class StarboardGraderBar extends lit.LitElement {
         </div>
       </form>`;
     } else if (this.jupyterPluginStatus === "loading") {
-      content = html`<div class="alert alert-info py-1 mt-2" style="width: max-content">
-        ⌛ Jupyter Plugin loading..
-      </div>`;
+      content = html`<div class="alert alert-info py-1 mt-2" style="width: max-content">⌛ Jupyter Plugin loading..</div>`;
     } else if (this.jupyterPluginStatus === "error-during-loading") {
       content = html`<div class="alert alert-danger py-1 mt-2" style="width: max-content">
         ❌ Something went wrong loading the plugin, please check your browser's console for details.<br />
@@ -155,16 +149,10 @@ export class StarboardGraderBar extends lit.LitElement {
                 ${this.jupyterPluginStatus !== "loaded"
                   ? undefined
                   : this.executionMode === "pyodide"
-                  ? html`<button
-                      class="btn btn-outline-primary btn-sm py-0 me-2"
-                      @click=${() => this.switchExecutionMode()}
-                    >
+                  ? html`<button class="btn btn-outline-primary btn-sm py-0 me-2" @click=${() => this.switchExecutionMode()}>
                       Switch to Jupyter
                     </button>`
-                  : html`<button
-                      class="btn btn-outline-primary btn-sm py-0 me-2"
-                      @click=${() => this.switchExecutionMode()}
-                    >
+                  : html`<button class="btn btn-outline-primary btn-sm py-0 me-2" @click=${() => this.switchExecutionMode()}>
                       Switch to in-browser Python
                     </button>`}
               </div>
@@ -175,9 +163,7 @@ export class StarboardGraderBar extends lit.LitElement {
                     ? "Python cells will be run on a remote Jupyter machine"
                     : "Python cells will be run in your browser"}"
                 >
-                  ${this.executionMode === "jupyter"
-                    ? html`<span class="bi bi-cloud me-1"></span> Jupyter`
-                    : html` Pyodide`}
+                  ${this.executionMode === "jupyter" ? html`<span class="bi bi-cloud me-1"></span> Jupyter` : html` Pyodide`}
                 </span>
               </div>
             </div>
@@ -186,9 +172,7 @@ export class StarboardGraderBar extends lit.LitElement {
           <div class="d-flex flex-column mt-2">
             <div class="d-flex">
               <button @click=${() => this.runAllCells()} class="btn btn-secondary btn-sm me-2">Run all cells</button>
-              <button @click=${() => this.clearAllCells()} class="btn btn-secondary btn-sm me-2">
-                Clear all output
-              </button>
+              <button @click=${() => this.clearAllCells()} class="btn btn-secondary btn-sm me-2">Clear all output</button>
               <div>${runAllIndicator}</div>
             </div>
             <div class="d-flex mt-2 justify-content-center align-items-center">${content}</div>

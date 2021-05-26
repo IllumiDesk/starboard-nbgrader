@@ -1,16 +1,17 @@
 {
   "name": "@illumidesk/starboard-nbgrader",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Starboard and nbgrader proof of concept",
   "main": "dist/index.js",
   "dependencies": {
-    "@spectrum-web-components/icons-workflow": "^0.6.1",
-    "lit": "*",
+    "jupystar": "^0.2.1",
+    "lit": "2.0.0-rc.2",
     "rollup": "^2.41.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
     "starboard-jupyter": "^0.2.9",
-    "starboard-notebook": "^0.10.1"
+    "starboard-notebook": "^0.10.1",
+    "starboard-wrap": "^0.3.3"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.1.0",

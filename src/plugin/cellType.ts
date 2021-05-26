@@ -2,20 +2,22 @@ import { Cell } from "starboard-notebook/dist/src/types";
 import { CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime } from "starboard-notebook/dist/src/types";
 
 import {
+  BasicGraderCellType,
   convertNBGraderType,
   getDefaultCellNBGraderMetadata,
   GraderCellType,
   GraderCellTypeDefinitions as DEFINITIONS,
-} from "./definitions";
+  isBasicGraderType,
+} from "../format/definitions";
 
 import { LitHtml as lithtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
 
-import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
-import { graderCellTypeLockableness, graderMetadataToNBGraderCellType } from "./graderUtils";
+import { NBGraderMetadata, StarboardGraderMetadata } from "../format/types";
+import { graderCellTypeLockableness, graderMetadataToNBGraderCellType } from "../format/graderUtils";
 import { TemplateResult } from "lit";
-import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
+import { CodeRunnerFeedbackElement, CodeRunnerResult } from "../elements/codeRunnerFeedback";
 import { getJupyterPlugin } from "./jupyter";
 import { getPythonExecutionMode } from "./state";
 
@@ -139,7 +141,27 @@ export class GraderCellHandler implements CellHandler {
     }
   }
 
-  private changeNBType(newType: GraderCellType) {
+  private clickGraderTypeButton(newType: GraderCellType) {
+    const clickedOnBasicType = isBasicGraderType(newType);
+    const currentTypeIsABasicType = isBasicGraderType(this.graderType);
+    const isChangingType = newType !== this.graderType;
+
+    if (!clickedOnBasicType && !currentTypeIsABasicType && !isChangingType) {
+      // Toggle the clicked one off, reverting to the basic type
+      newType = this.underlyingCellType;
+    }
+
+    if (clickedOnBasicType) {
+      if (!currentTypeIsABasicType) {
+        if (DEFINITIONS[this.graderType].supportedCellTypes.indexOf(newType as any) === -1) {
+          // This underlying cell type is not supported, so we switch to the basic type
+        } else {
+          this.changeLanguage(newType as BasicGraderCellType);
+          return;
+        }
+      }
+    }
+
     this.graderType = newType;
     const md = this.getNBGraderMetadata();
 
@@ -202,14 +224,11 @@ export class GraderCellHandler implements CellHandler {
 
     if (this.topbarExpanded) {
       topbarControls = html` <div class="grader-cell grader-cell-top-bar ${this.graderType}">
-
-        
         <div class="grader-controls">
-
           <!-- Markdown vs Python selector -->
           <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
             <button
-              @click=${() => this.changeNBType("markdown")}
+              @click=${() => this.clickGraderTypeButton("markdown")}
               class="btn btn-sm ${this.graderType} ${
         this.graderType === "markdown" || this.underlyingCellType === "markdown" ? "active" : ""
       }"
@@ -217,7 +236,7 @@ export class GraderCellHandler implements CellHandler {
               📃 Markdown
             </button>
             <button
-              @click=${() => this.changeNBType("python")}
+              @click=${() => this.clickGraderTypeButton("python")}
               class="btn btn-sm ${this.graderType} ${this.graderType === "python" || this.underlyingCellType === "python" ? "active" : ""}"
             >
               🐍 Python
@@ -243,7 +262,7 @@ export class GraderCellHandler implements CellHandler {
                     ?disabled=${isDisabled}
                     title="${title}"
                     style=${styles}
-                    @click=${() => this.changeNBType(type as GraderCellType)}
+                    @click=${() => this.clickGraderTypeButton(type as GraderCellType)}
                     class="btn btn-sm ${this.graderType} ${classes}"
                   >
                     ${def.emoji} ${def.name}

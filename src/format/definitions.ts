@@ -6,6 +6,7 @@ import { NBGraderMetadata } from "./types";
 declare const runtime: Runtime;
 declare const html: typeof LitHtml.html;
 
+export type BasicGraderCellType = "python" | "markdown";
 export type GraderCellType = "manual-answer" | "manual-task" | "autograder-answer" | "autograder-tests" | "python" | "markdown";
 
 export interface GraderCellTypeDefinition {
@@ -163,4 +164,8 @@ export function convertNBGraderType(md: NBGraderMetadata, newType: GraderCellTyp
     md.grade = md.task = md.solution = false;
     delete md.points;
   }
+}
+
+export function isBasicGraderType(gct: GraderCellType): boolean {
+  return gct === "markdown" || gct === "python";
 }

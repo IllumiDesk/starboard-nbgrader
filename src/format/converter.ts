@@ -1,4 +1,3 @@
-import { NotebookContent } from "starboard-notebook/dist/src/types";
 import { textToNotebookContent } from "starboard-notebook/dist/src/content/parsing";
 import { notebookContentToText } from "starboard-notebook/dist/src/content/serialization";
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
@@ -6,18 +5,8 @@ import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 /**
  * Transforms given notebook content, replacing python and markdown cells that have nbgrader metadata with a special grader cell type.
  */
-export function upgradeNBGraderCells(nb: NotebookContent | string) {
-  if (typeof nb === "string") {
-    nb = textToNotebookContent(nb);
-  } else {
-    // Poor man's copy
-    nb = JSON.parse(JSON.stringify(nb));
-  }
-
-  // Make TS happy
-  if (typeof nb === "string") {
-    return;
-  }
+export function upgradeNBGraderCells(nbContent: string) {
+  const nb = textToNotebookContent(nbContent);
 
   nb.cells.forEach((c) => {
     const md = c.metadata.nbgrader as NBGraderMetadata;
@@ -72,18 +61,8 @@ export function prependPluginLoaderMetadata(nb: string, opts: { pluginUrl: strin
  * Swaps out grader cells with their basic python/markdown representation for conversion back to ipynb
  * @param nb
  */
-export function preprocessGraderCellsForJupystar(nb: NotebookContent | string) {
-  if (typeof nb === "string") {
-    nb = textToNotebookContent(nb);
-  } else {
-    // Poor man's copy
-    nb = JSON.parse(JSON.stringify(nb));
-  }
-
-  // Make TS happy
-  if (typeof nb === "string") {
-    return;
-  }
+export function preprocessGraderCellsForJupystar(nbcontent: string) {
+  const nb = textToNotebookContent(nbcontent);
 
   nb.cells.forEach((c) => {
     if (c.cellType === "grader") {
@@ -91,18 +70,7 @@ export function preprocessGraderCellsForJupystar(nb: NotebookContent | string) {
 
       c.cellType = md === undefined ? "python" : md.original_cell_type;
       delete (c.metadata as any).starboard_grader;
-    } /* Note(gzuidhof): nbgrader_locked is probably not necessary anymore.
-    else if (c.metadata.properties.nbgrader_locked) {
-      const md: NBGraderMetadata = {
-        locked: true,
-        grade_id: c.id,
-        grade: false,
-        solution: false,
-        schema_version: 3,
-        task: false,
-      };
-      c.metadata.nbgrader = md;
-    }*/
+    }
   });
 
   return notebookContentToText(nb);

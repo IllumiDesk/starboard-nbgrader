@@ -177,7 +177,6 @@ function createNotebook(content) {
 
     const href = window.location.href;
     const baseUrl = href.substring(0, href.lastIndexOf('/')) + "/";
-
     const pluginUrl = baseUrl + "../dist/plugin.js";
     const jupyterBaseUrl = "http://localhost:8888";
 
