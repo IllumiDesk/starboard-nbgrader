@@ -5,12 +5,11 @@
   "main": "dist/index.js",
   "dependencies": {
     "jupystar": "^0.2.1",
-    "lit": "2.0.0-rc.2",
     "rollup": "^2.41.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
     "starboard-jupyter": "^0.2.9",
-    "starboard-notebook": "^0.10.1",
+    "starboard-notebook": "^0.10.2",
     "starboard-wrap": "^0.3.3"
   },
   "devDependencies": {

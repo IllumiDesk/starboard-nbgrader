@@ -182,7 +182,7 @@ function createNotebook(content) {
 
     const el = new StarboardEmbed({
         notebookContent: prependPluginLoaderMetadata(content, { pluginUrl: pluginUrl, jupyterBaseUrl: jupyterBaseUrl }),
-        src: "https://unpkg.com/starboard-notebook@0.10.1/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.10.2/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,
 

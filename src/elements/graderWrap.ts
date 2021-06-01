@@ -1,5 +1,5 @@
-import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators/custom-element.js";
+import { lit, litDecorators } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+
 import { StarboardEmbed } from "starboard-wrap";
 import { StarboardNotebookIFrameOptions } from "starboard-wrap/dist/embed";
 import { convertStarboardStringToJupyterString, convertJupyterStringToStarboardString } from "jupystar";
@@ -20,8 +20,8 @@ export function convertStarboardGraderNotebookContentToIpynb(notebookContent: st
   return convertStarboardStringToJupyterString(preprocessGraderCellsForJupystar(notebookContent));
 }
 
-@customElement("grader-wrap")
-export class GraderNotebookWrap extends LitElement {
+@litDecorators.customElement("grader-wrap")
+export class GraderNotebookWrap extends lit.LitElement {
   private currentIpynbContent: string;
   private opts: GraderNotebookWrapOptions;
 
@@ -78,6 +78,6 @@ export class GraderNotebookWrap extends LitElement {
   }
 
   public render() {
-    return html``;
+    return lit.html``;
   }
 }

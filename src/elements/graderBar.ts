@@ -4,15 +4,15 @@ import { GraderPluginOpts } from "../plugin/plugin";
 import { getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../plugin/state";
 
 import { TemplateResult } from "lit";
-import { customElement } from "lit/decorators.js";
 
 const lit = (window.runtime as Runtime).exports.libraries.lit;
+const dec = (window.runtime as Runtime).exports.libraries.litDecorators;
 const html = lit.html;
 
 type JupyterPluginLoadStatus = "unstarted" | "loading" | "error-during-loading" | "loaded";
 type RunningAllCellsStatus = "unstarted" | "running" | "success" | "fail";
 
-@customElement("starboard-grader-bar")
+@dec.customElement("starboard-grader-bar")
 export class StarboardGraderBar extends lit.LitElement {
   set executionMode(val: PythonGraderCellExecutionMode) {
     setPythonExecutionMode(val);

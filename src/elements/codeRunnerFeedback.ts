@@ -1,24 +1,15 @@
-import { lit } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
-import { customElement, query } from "lit/decorators.js";
+import { lit, litDecorators } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 
-export type CodeRunnerResult =
-  | "empty"
-  | "success"
-  | "test-success"
-  | "test-fail"
-  | "fail"
-  | "running"
-  | "running-setup"
-  | "abort";
+export type CodeRunnerResult = "empty" | "success" | "test-success" | "test-fail" | "fail" | "running" | "running-setup" | "abort";
 
 const html = lit.html;
 
-@customElement("grader-code-feedback")
+@litDecorators.customElement("grader-code-feedback")
 export class CodeRunnerFeedbackElement extends lit.LitElement {
   showOutput: boolean = true;
   result: CodeRunnerResult = "empty";
 
-  @query(".grader-code-cell-output")
+  @litDecorators.query(".grader-code-cell-output")
   outputElement!: HTMLElement;
 
   constructor() {
