@@ -1,5 +1,5 @@
 import { convertJupyterStringToStarboardString, convertStarboardStringToJupyterString } from "https://cdn.skypack.dev/jupystar";
-import { StarboardEmbed } from "https://cdn.skypack.dev/starboard-wrap@0.3.2";
+import { StarboardEmbed } from "https://cdn.skypack.dev/starboard-wrap@0.4.0";
 import { upgradeNBGraderCells, preprocessGraderCellsForJupystar, prependPluginLoaderMetadata } from "../dist/converter.js";
 
 let currentStarboardNotebookContent = ``;
@@ -182,7 +182,7 @@ function createNotebook(content) {
 
     const el = new StarboardEmbed({
         notebookContent: prependPluginLoaderMetadata(content, { pluginUrl: pluginUrl, jupyterBaseUrl: jupyterBaseUrl }),
-        src: "https://unpkg.com/starboard-notebook@0.10.2/dist/index.html",
+        src: "https://unpkg.com/starboard-notebook@0.12.0/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,
 

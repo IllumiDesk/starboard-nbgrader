@@ -90,7 +90,7 @@ export class StarboardGraderBar extends lit.LitElement {
   private clearAllCells() {
     try {
       this.setRunningAllCellsStatus("unstarted");
-      this.runtime.controls.clearAllCells();
+      this.runtime.controls.clearAllCells({});
     } catch (e) {
       console.error("Failed to clear all cells:", e);
     }
