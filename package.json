@@ -1,6 +1,6 @@
 {
   "name": "@illumidesk/starboard-nbgrader",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Starboard and nbgrader proof of concept",
   "main": "dist/index.js",
   "dependencies": {

@@ -101,7 +101,7 @@ export class GraderCellHandler implements CellHandler {
       const runButton: ControlButton = {
         icon,
         tooltip,
-        callback: () => this.runtime.controls.emit({ id: this.cell.id, type: "RUN_CELL" }),
+        callback: () => this.runtime.controls.runCell({ id: this.cell.id }),
       };
       let buttons = [runButton];
 
