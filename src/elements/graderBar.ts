@@ -1,7 +1,7 @@
 import { Runtime } from "starboard-notebook/dist/src/types";
 import { registerJupyterPlugin } from "../plugin/jupyter";
 import { GraderPluginOpts } from "../plugin/plugin";
-import { getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../plugin/state";
+import { getGraderPluginMode, getPythonExecutionMode, PythonGraderCellExecutionMode, setPythonExecutionMode } from "../plugin/state";
 
 import { TemplateResult } from "lit";
 
@@ -141,7 +141,7 @@ export class StarboardGraderBar extends lit.LitElement {
         <details>
           <summary class="d-flex justify-content-between flex-wrap">
             <div class="d-flex align-items-center flex-wrap">
-              <h2 class="h5 mb-0 me-2">Notebook Assignment Creator</h2>
+              <h2 class="h5 mb-0 me-2">${getGraderPluginMode() === "student" ? "Notebook Assignment" : "Notebook Assignment Creator"}</h2>
               <small class="x-small">Click to expand</small>
             </div>
             <div class="d-flex">

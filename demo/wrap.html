@@ -23,6 +23,12 @@
     <script type="module">
         import {GraderNotebookWrap, convertStarboardGraderNotebookContentToIpynb} from "../dist/graderWrap.js"
 
+        let mode = "assignment-creator";
+        const params = new URLSearchParams(window. location. search)
+        if (params.has("mode")) {
+            mode = params.get("mode");
+        }
+
         const opts = {
             embedOptions: {
                 onSaveMessage(payload) {
@@ -41,6 +47,7 @@
             pluginOptions: {
               pluginUrl: "https://unpkg.com/@illumidesk/starboard-nbgrader/dist/plugin.js",
               jupyterBaseUrl: "http://localhost:8888",
+              mode
             }
         };
         const embed = new GraderNotebookWrap(opts);

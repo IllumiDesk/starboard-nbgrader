@@ -42,7 +42,7 @@
 }
 
 .grader-pill {
-  padding: 0.16em 0.6em;
+  padding: 0.12em 0.6em;
   border-radius: 9px;
   background-color: var(--brand-color);
   width: max-content;
@@ -147,4 +147,8 @@ starboard-grader-bar {
 
 .x-small {
   font-size: 0.625em;
+}
+
+starboard-cell.property-locked .ProseMirror-menubar {
+  display: none;
 }

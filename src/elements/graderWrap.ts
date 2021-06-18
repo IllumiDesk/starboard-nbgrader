@@ -5,6 +5,7 @@ import { StarboardEmbed } from "starboard-wrap";
 import { StarboardNotebookIFrameOptions } from "starboard-wrap/dist/embed";
 import { convertStarboardStringToJupyterString, convertJupyterStringToStarboardString } from "jupystar";
 import { prependPluginLoaderMetadata, preprocessGraderCellsForJupystar, upgradeNBGraderCells } from "../format/converter";
+import { GraderPluginMode } from "../plugin/state";
 
 export interface GraderNotebookWrapOptions {
   embedOptions: Partial<StarboardNotebookIFrameOptions>;
@@ -14,6 +15,7 @@ export interface GraderNotebookWrapOptions {
      */
     pluginUrl: string;
     jupyterBaseUrl: string;
+    mode: GraderPluginMode;
   };
 }
 

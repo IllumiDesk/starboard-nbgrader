@@ -180,9 +180,18 @@ function createNotebook(content) {
     const pluginUrl = baseUrl + "../dist/plugin.js";
     const jupyterBaseUrl = "http://localhost:8888";
 
+    // assignment-creator, grader or student.
+    let mode = "assignment-creator";
+    const params = new URLSearchParams(window.location.search)
+    if (params.has("mode")) {
+        mode = params.get("mode");
+    }
+
+    console.log("Notebook mode: ", mode);
+
     const el = new StarboardEmbed({
-        notebookContent: prependPluginLoaderMetadata(content, { pluginUrl: pluginUrl, jupyterBaseUrl: jupyterBaseUrl }),
-        src: "https://unpkg.com/starboard-notebook@0.12.0/dist/index.html",
+        notebookContent: prependPluginLoaderMetadata(content, { pluginUrl: pluginUrl, jupyterBaseUrl: jupyterBaseUrl, mode: mode }),
+        src: "https://unpkg.com/starboard-notebook@0.12.1/dist/index.html",
         // src: "http://localhost:9001/index.html",
         baseUrl: baseUrl,
 

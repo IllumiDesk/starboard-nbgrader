@@ -1,5 +1,6 @@
 import { textToNotebookContent } from "starboard-notebook/dist/src/content/parsing";
 import { notebookContentToText } from "starboard-notebook/dist/src/content/serialization";
+import { GraderPluginMode } from "../plugin/state";
 import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
 
 /**
@@ -19,7 +20,6 @@ export function upgradeNBGraderCells(nbContent: string) {
           original_cell_type: originalCellType,
           is_basic_cell: true,
         };
-        // c.metadata.properties.nbgrader_locked = md.locked;
       } else {
         (c.metadata.starboard_grader as StarboardGraderMetadata) = {
           original_cell_type: originalCellType,
@@ -30,9 +30,10 @@ export function upgradeNBGraderCells(nbContent: string) {
     } else {
       // We translate non-nbgrader cells too to their grader equivalent.
       if (c.cellType === "markdown" || c.cellType === "python") {
+        const originalCellType = c.cellType;
         c.cellType = "grader";
         c.metadata.starboard_grader = {
-          origin_cell_type: c.cellType,
+          original_cell_type: originalCellType,
           is_basic_cell: true,
         };
       }
@@ -42,7 +43,7 @@ export function upgradeNBGraderCells(nbContent: string) {
   return notebookContentToText(nb);
 }
 
-export function prependPluginLoaderMetadata(nb: string, opts: { pluginUrl: string; jupyterBaseUrl: string }) {
+export function prependPluginLoaderMetadata(nb: string, opts: { pluginUrl: string; jupyterBaseUrl: string; mode: GraderPluginMode }) {
   const content = textToNotebookContent(nb);
   content.metadata.starboard = content.metadata.starboard || {};
 
@@ -51,7 +52,10 @@ export function prependPluginLoaderMetadata(nb: string, opts: { pluginUrl: strin
   }
   content.metadata.starboard!.plugins.push({
     src: opts.pluginUrl,
-    args: { jupyter: { serverSettings: { baseUrl: opts.jupyterBaseUrl } } },
+    args: {
+      mode: opts.mode,
+      jupyter: { serverSettings: { baseUrl: opts.jupyterBaseUrl } },
+    },
   });
 
   return notebookContentToText(content);
