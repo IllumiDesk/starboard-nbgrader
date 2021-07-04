@@ -4,6 +4,11 @@ export type CodeRunnerResult = "empty" | "success" | "test-success" | "test-fail
 
 const html = lit.html;
 
+/**
+ * A custom element that is displayed above the cell output with some information about the output.
+ *
+ * For example, it shows a red bar with "Tests failed" in case of a auto-grader test cell that threw something.
+ */
 @litDecorators.customElement("grader-code-feedback")
 export class CodeRunnerFeedbackElement extends lit.LitElement {
   showOutput: boolean = true;
