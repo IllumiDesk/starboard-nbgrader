@@ -1,40 +1,43 @@
-import { Cell } from "starboard-notebook/dist/src/types";
+import { Cell, CellTypeDefinition } from "starboard-notebook/dist/src/types";
 import { CellElements, CellHandler, CellHandlerAttachParameters, ControlButton, Runtime } from "starboard-notebook/dist/src/types";
 
 import {
+  BasicGraderCellType,
   convertNBGraderType,
   getDefaultCellNBGraderMetadata,
   GraderCellType,
   GraderCellTypeDefinitions as DEFINITIONS,
-} from "./definitions";
+  isBasicGraderType,
+} from "../format/definitions";
 
-import { LitHtml as lithtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
+import { lit } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { StarboardContentEditor, StarboardTextEditor } from "starboard-notebook/dist/src/runtime/esm/exports/elements";
 import { cellControls as cellControlsTemplate, icons } from "starboard-notebook/dist/src/runtime/esm/exports/templates";
 
-import { NBGraderMetadata, StarboardGraderMetadata } from "./types";
-import { graderCellTypeLockableness, graderMetadataToNBGraderCellType } from "./graderUtils";
+import { NBGraderMetadata, StarboardGraderMetadata } from "../format/types";
+import { graderMetadataToNBGraderCellType } from "../format/graderUtils";
 import { TemplateResult } from "lit";
-import { CodeRunnerFeedbackElement, CodeRunnerResult } from "./elements/codeRunnerFeedback";
+import { CodeRunnerFeedbackElement, CodeRunnerResult } from "../elements/codeRunnerFeedback";
 import { getJupyterPlugin } from "./jupyter";
-import { getPythonExecutionMode } from "./state";
+import { getGraderPluginMode, getPythonExecutionMode } from "./state";
+import { RemoveCellEvent, SetCellPropertyEvent } from "starboard-notebook/dist/src/types/events";
+import { graderCellTopbarControlsTemplate } from "../elements/graderCellTopbar";
 
 declare const runtime: Runtime;
-declare const html: typeof lithtml.html;
+declare const html: typeof lit.html;
 
 type OutputArea = ReturnType<ReturnType<typeof getJupyterPlugin>["exports"]["createJupyterOutputArea"]>;
 
-const GRADER_CELL_TYPE_DEFINITION = {
-  name: "Assignment (grader)",
+const GRADER_CELL_TYPE_DEFINITION: CellTypeDefinition = {
+  name: "Assignment Cell",
   cellType: ["grader"],
   createHandler: (cell: Cell, runtime: Runtime) => new GraderCellHandler(cell, runtime),
 };
 
 export class GraderCellHandler implements CellHandler {
   cell: Cell;
-  runtime: Runtime;
-
   elements!: CellElements;
+  runtime: Runtime;
   editor?: InstanceType<typeof StarboardTextEditor> | InstanceType<typeof StarboardContentEditor>;
 
   private topbarExpanded = false;
@@ -43,22 +46,15 @@ export class GraderCellHandler implements CellHandler {
    * the last point count.
    */
   private cachedPointCount = 1;
-
   private get useJupyterBackend() {
     return getPythonExecutionMode() === "jupyter";
   }
 
   private jupyterOutputArea?: OutputArea;
-
   private graderType: GraderCellType;
   private underlyingCellType: "python" | "markdown";
-
-  /**
-   * The editor is shown for Markdown content currently (instead of the content itself)
-   */
   private isCurrentlyRunning: boolean = false;
   private isCurrentlyLoadingPyodide: boolean = false;
-
   /**
    * The last ID of a Python run. This is used for showing the right state of the "run" button if there are
    * more than 1 overlapping runs of Python in this cell.
@@ -73,6 +69,7 @@ export class GraderCellHandler implements CellHandler {
     if (this.getNBGraderMetadata() === undefined) {
       this.cell.metadata.nbgrader = getDefaultCellNBGraderMetadata(this.cell.id);
     }
+
     const starboardGraderMetadata = this.cell.metadata.starboard_grader as StarboardGraderMetadata | undefined;
     if (starboardGraderMetadata?.is_basic_cell) {
       this.graderType = starboardGraderMetadata!.original_cell_type;
@@ -85,6 +82,10 @@ export class GraderCellHandler implements CellHandler {
       this.underlyingCellType = "python";
     } else {
       this.underlyingCellType = starboardGraderMetadata.original_cell_type;
+    }
+
+    if (this.cell.metadata.editable === false && getGraderPluginMode() === "student") {
+      this.runtime.controls.setCellProperty({ id: this.cell.id, property: "locked", value: true });
     }
   }
 
@@ -99,7 +100,7 @@ export class GraderCellHandler implements CellHandler {
       const runButton: ControlButton = {
         icon,
         tooltip,
-        callback: () => this.runtime.controls.emit({ id: this.cell.id, type: "RUN_CELL" }),
+        callback: () => this.runtime.controls.runCell({ id: this.cell.id }),
       };
       let buttons = [runButton];
 
@@ -122,9 +123,9 @@ export class GraderCellHandler implements CellHandler {
 
   private updateRender() {
     const topElement = this.elements.topElement;
-    lithtml.render(this.topTemplate(), topElement);
-    lithtml.render(this.getControls(), this.elements.topControlsElement);
-    lithtml.render(html`${this.codeRunnerFeedbackElement}`, this.elements.bottomElement);
+    lit.render(this.topTemplate(), topElement);
+    lit.render(this.getControls(), this.elements.topControlsElement);
+    lit.render(html`${this.codeRunnerFeedbackElement}`, this.elements.bottomElement);
   }
 
   private setupEditor() {
@@ -135,11 +136,35 @@ export class GraderCellHandler implements CellHandler {
     if (this.underlyingCellType === "python") {
       this.editor = new StarboardTextEditor(this.cell, this.runtime, { language: this.underlyingCellType });
     } else {
-      this.editor = new StarboardContentEditor(this.cell, this.runtime);
+      this.editor = new StarboardContentEditor(this.cell, this.runtime, {
+        editable: () => {
+          return this.cell.metadata.editable;
+        },
+      });
     }
   }
 
-  private changeNBType(newType: GraderCellType) {
+  private clickGraderTypeButton(newType: GraderCellType) {
+    const clickedOnBasicType = isBasicGraderType(newType);
+    const currentTypeIsABasicType = isBasicGraderType(this.graderType);
+    const isChangingType = newType !== this.graderType;
+
+    if (!clickedOnBasicType && !currentTypeIsABasicType && !isChangingType) {
+      // Toggle the clicked one off, reverting to the basic type
+      newType = this.underlyingCellType;
+    }
+
+    if (clickedOnBasicType) {
+      if (!currentTypeIsABasicType) {
+        if (DEFINITIONS[this.graderType].supportedCellTypes.indexOf(newType as any) === -1) {
+          // This underlying cell type is not supported, so we switch to the basic type
+        } else {
+          this.changeLanguage(newType as BasicGraderCellType);
+          return;
+        }
+      }
+    }
+
     this.graderType = newType;
     const md = this.getNBGraderMetadata();
 
@@ -182,9 +207,21 @@ export class GraderCellHandler implements CellHandler {
     this.updateRender();
   }
 
-  private toggleExpansion() {
-    this.topbarExpanded = !this.topbarExpanded;
-    this.updateRender();
+  private onPillClick() {
+    if (getGraderPluginMode() === "assignment-creator") {
+      this.topbarExpanded = !this.topbarExpanded;
+      this.updateRender();
+    } else if (getGraderPluginMode() === "student") {
+      // Students can only switch between python <> markdown for basic cells.
+      if (isBasicGraderType(this.graderType)) {
+        if (this.underlyingCellType === "markdown") {
+          this.clickGraderTypeButton("python");
+        } else {
+          this.clickGraderTypeButton("markdown");
+        }
+      }
+      this.updateRender();
+    }
   }
 
   private toggleStudentLock(event: InputEvent) {
@@ -193,114 +230,22 @@ export class GraderCellHandler implements CellHandler {
     this.updateRender();
   }
 
+  // Top half of the cell contains the pill and the editor
   topTemplate() {
     const md = this.getNBGraderMetadata();
     const graderDefinition = DEFINITIONS[this.graderType];
-    let topbarControls: TemplateResult | undefined;
-
-    const lockableness = graderCellTypeLockableness(this.graderType);
-
-    if (this.topbarExpanded) {
-      topbarControls = html` <div class="grader-cell grader-cell-top-bar ${this.graderType}">
-
-        
-        <div class="grader-controls">
-
-          <!-- Markdown vs Python selector -->
-          <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
-            <button
-              @click=${() => this.changeNBType("markdown")}
-              class="btn btn-sm ${this.graderType} ${
-        this.graderType === "markdown" || this.underlyingCellType === "markdown" ? "active" : ""
-      }"
-            >
-              📃 Markdown
-            </button>
-            <button
-              @click=${() => this.changeNBType("python")}
-              class="btn btn-sm ${this.graderType} ${this.graderType === "python" || this.underlyingCellType === "python" ? "active" : ""}"
-            >
-              🐍 Python
-            </button>
-          </div>
-
-           <!-- Grader type selector -->
-            <div class="btn-group btn-sm ps-0" role="group" aria-label="Grader cell type">
-              ${Object.entries(DEFINITIONS).map(([type, def]) => {
-                // Markdown and python are rendered independently above.
-                if (type === "markdown" || type === "python") return undefined;
-
-                const isDisabled = def.supportedCellTypes.indexOf(this.underlyingCellType) === -1;
-
-                let classes = "";
-                if (this.graderType === type) classes += " active";
-                const styles = `pointer-events: auto; ${isDisabled ? "cursor: not-allowed" : ""}`;
-
-                let title = isDisabled ? `A ${this.graderType} cell can't be an ${def.name}` : "";
-
-                return html`
-                  <button
-                    ?disabled=${isDisabled}
-                    title="${title}"
-                    style=${styles}
-                    @click=${() => this.changeNBType(type as GraderCellType)}
-                    class="btn btn-sm ${this.graderType} ${classes}"
-                  >
-                    ${def.emoji} ${def.name}
-                  </button>
-                `;
-              })}
-            </div>
-
-            ${
-              graderDefinition.hasPoints
-                ? html`
-                    ${graderDefinition.hasPoints
-                      ? html` <div class="input-group input-group-sm mb-3" style="max-width: 132px">
-                          <span class="input-group-text">Points</span>
-                          <input
-                            @input="${(e: any) => this.changePointValue(e)}"
-                            type="number"
-                            min="0"
-                            max="999999999999"
-                            placeholder="Points (number equal or greater than 0)"
-                            class="form-control"
-                            value="${md.points || 0}"
-                          />
-                        </div>`
-                      : undefined}
-                  `
-                : undefined
-            }
-
-            ${(() => {
-              if (lockableness === "never") {
-                return undefined; // Display nothing when the cell is editable by students
-              } else if (lockableness === "always") {
-                return html`<label class="form-check-label ms-auto" title="This cell can not be edited by students">🔒</label>`;
-              }
-
-              return html`<div class="form-check form-switch ms-auto" title="Disable editing of this cell by students">
-                <label class="form-check-label" for="lockEditing">🔒</label>
-                <input
-                  @change=${(evt: InputEvent) => this.toggleStudentLock(evt)}
-                  class="form-check-input mx-1"
-                  type="checkbox"
-                  id="lockEditing"
-                  ?disabled=${lockableness !== "choice"}
-                  ?checked=${this.getNBGraderMetadata().locked}
-                />
-              </div>`;
-            })()}
-
-          </div>
-          <p class="mb-0"><small>${graderDefinition.description}</small></p>
-        </div>
-      </div>`;
-    }
+    const topbarControls = graderCellTopbarControlsTemplate({
+      nbGraderMetadata: md,
+      graderType: this.graderType,
+      underlyingCellType: this.underlyingCellType,
+      isExpanded: this.topbarExpanded,
+      changePointValue: (evt) => this.changePointValue(evt),
+      clickGraderTypeButton: (x) => this.clickGraderTypeButton(x),
+      toggleStudentLock: (x) => this.toggleStudentLock(x),
+    });
 
     return html`
-      <button @click=${() => this.toggleExpansion()} class="grader-pill ${this.graderType}${this.topbarExpanded ? " expanded" : ""}">
+      <button @click=${() => this.onPillClick()} class="grader-pill ${this.graderType}${this.topbarExpanded ? " expanded" : ""}">
         <b>${graderDefinition.emoji} ${graderDefinition.name}</b>
         ${graderDefinition.hasPoints
           ? html`<span class="ms-1"><small>(${md.points} point${md.points === 1 ? "" : "s"})</small></span>`
@@ -315,6 +260,28 @@ export class GraderCellHandler implements CellHandler {
     this.elements = params.elements;
     this.setupEditor();
     this.updateRender();
+
+    // Disallow students from removing locked cells or removing the lock
+    if (getGraderPluginMode() === "student") {
+      this.elements.cell.addEventListener("sb:set_cell_property", (evt: SetCellPropertyEvent) => {
+        if (evt.detail.property === "locked") {
+          if (evt.detail.value) {
+            alert("You are not allowed to lock cells as a student.");
+          } else {
+            alert("You can not remove the edit restrictions of this cell.");
+          }
+
+          evt.preventDefault();
+        }
+      });
+
+      this.elements.cell.addEventListener("sb:remove_cell", (evt: RemoveCellEvent) => {
+        if (this.cell.metadata.properties.locked) {
+          alert("Locked cells can not be removed.");
+          evt.preventDefault();
+        }
+      });
+    }
   }
 
   async run() {
@@ -335,7 +302,7 @@ export class GraderCellHandler implements CellHandler {
         if (pythonPlugin.getPyodideLoadingStatus() !== "ready") {
           this.isCurrentlyLoadingPyodide = true;
           this.codeRunnerFeedbackElement.setRunResult("running-setup");
-          lithtml.render(this.getControls(), this.elements.topControlsElement);
+          lit.render(this.getControls(), this.elements.topControlsElement);
         } else {
           this.codeRunnerFeedbackElement.setRunResult("running");
         }
@@ -378,7 +345,7 @@ export class GraderCellHandler implements CellHandler {
       this.isCurrentlyLoadingPyodide = false;
       if (this.lastRunId === currentRunId) {
         this.isCurrentlyRunning = false;
-        lithtml.render(this.getControls(), this.elements.topControlsElement);
+        lit.render(this.getControls(), this.elements.topControlsElement);
 
         let runnerStatusCode: CodeRunnerResult = status !== "ok" ? "fail" : "success";
         if (this.graderType === "autograder-tests") {
@@ -407,10 +374,41 @@ export class GraderCellHandler implements CellHandler {
   clear() {
     const outputMount = this.codeRunnerFeedbackElement.getOutputElement();
     this.codeRunnerFeedbackElement.reset();
-    lithtml.render(lithtml.html``, outputMount);
+    lit.render(lit.html``, outputMount);
   }
 }
 
 export function registerGraderCellType() {
+  const def = GRADER_CELL_TYPE_DEFINITION;
+
+  if (getGraderPluginMode() === "student") {
+    def.createCellCreationInterface = (runtime: Runtime, opts: { create: () => void }) => {
+      let cellInit: Partial<Cell> = {
+        metadata: {
+          properties: {},
+          starboard_grader: {
+            original_cell_type: "markdown",
+            is_basic_cell: true,
+          },
+        },
+      };
+
+      function createCell(type: "markdown" | "python") {
+        cellInit.metadata!.starboard_grader.original_cell_type = type;
+        opts.create();
+      }
+
+      return {
+        getCellInit: () => cellInit,
+        render: () => lit.html`
+          <div class="p-3">
+            <button class="btn btn-secondary btn-small me-2" @click="${() => createCell("python")}">🐍 Python Cell</button>
+            <button class="btn btn-secondary btn-small" @click="${() => createCell("markdown")}">📃 Markdown Cell</button>
+          </div>
+        `,
+      };
+    };
+  }
+
   runtime.definitions.cellTypes.register(GRADER_CELL_TYPE_DEFINITION.cellType, GRADER_CELL_TYPE_DEFINITION);
 }

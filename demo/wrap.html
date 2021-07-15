@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Starboard Grader Embed demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+        body, html {
+            position: relative;
+            background-color: #fcfcfc;
+            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+            margin: 0;
+            padding: 0;
+            max-width: 100vw;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mount-point"></div>
+
+    <script type="module">
+        import {GraderNotebookWrap, convertStarboardGraderNotebookContentToIpynb} from "../dist/graderWrap.js"
+
+        let mode = "assignment-creator";
+        const params = new URLSearchParams(window. location. search)
+        if (params.has("mode")) {
+            mode = params.get("mode");
+        }
+
+        const opts = {
+            embedOptions: {
+                onSaveMessage(payload) {
+                    console.log("Save requested");
+                    const newIpynbContent = convertStarboardGraderNotebookContentToIpynb(payload.content);
+                    console.log(newIpynbContent);
+
+                    return true; // Return true if succesful, this can be an async function too (and it probably will be as you would usually talk to a remote server to save).
+                },
+                onUnsavedChangesStatusChange(hasUnsavedChanges) {
+                    // Here you can update some UI element that shows whether you have unsaved changes or not.
+                    console.log("There are now unsaved changes:", hasUnsavedChanges)
+                },
+                preventNavigationWithUnsavedChanges: true // Warn the user if they navigate away with unsaved changes.
+            },
+            pluginOptions: {
+              pluginUrl: "https://unpkg.com/@illumidesk/starboard-nbgrader/dist/plugin.js",
+              jupyterBaseUrl: "http://localhost:8888",
+              mode
+            }
+        };
+        const embed = new GraderNotebookWrap(opts);
+        document.querySelector("#mount-point").appendChild(embed);
+
+        // Set the ipynb content in the notebook like this (after fetching it from some endpoint)
+        const ipynb = {"cells":[{"cell_type":"code","execution_count":3,"id":"cooperative-healthcare","metadata":{"nbgrader":{"grade":false,"grade_id":"cell-ff14169315ad87d3","locked":false,"schema_version":3,"solution":true,"task":false}},"outputs":[],"source":["def squares(n):\n","    \"\"\"Compute the squares of numbers from 1 to n\"\"\"\n","    \n","    ### BEGIN SOLUTION\n","    if n < 1:\n","        raise ValueError(\"n must be greater than or equal to 1\")\n","    return [i**2 for i in range(1, n+1)]\n","    ### END SOLUTION"]}],"metadata":{},"nbformat":4,"nbformat_minor":5};
+        const ipynbString = JSON.stringify(ipynb);
+        embed.setIpynbContent(ipynbString)
+        
+    </script>
+</body>
+</html>

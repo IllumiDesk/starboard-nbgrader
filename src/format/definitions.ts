@@ -2,10 +2,12 @@ import { TemplateResult } from "lit";
 import { Runtime } from "starboard-notebook/dist/src/types";
 import { LitHtml } from "starboard-notebook/dist/src/runtime/esm/exports/libraries";
 import { NBGraderMetadata } from "./types";
+import { getGraderPluginMode } from "../plugin/state";
 
 declare const runtime: Runtime;
 declare const html: typeof LitHtml.html;
 
+export type BasicGraderCellType = "python" | "markdown";
 export type GraderCellType = "manual-answer" | "manual-task" | "autograder-answer" | "autograder-tests" | "python" | "markdown";
 
 export interface GraderCellTypeDefinition {
@@ -126,16 +128,28 @@ assert_equal(squares(3), [1, 4, 9])
 };
 
 export function getDefaultCellNBGraderMetadata(cellId: string): NBGraderMetadata {
-  const md: NBGraderMetadata = {
-    solution: true,
-    grade: true,
-    points: 1,
-    task: false,
-    grade_id: cellId,
-    locked: false,
-    schema_version: 3,
-  };
-  return md;
+  if (getGraderPluginMode() === "assignment-creator") {
+    const md: NBGraderMetadata = {
+      solution: true,
+      grade: true,
+      points: 1,
+      task: false,
+      grade_id: cellId,
+      locked: false,
+      schema_version: 3,
+    };
+    return md;
+  } else {
+    const md: NBGraderMetadata = {
+      solution: false,
+      grade: false,
+      task: false,
+      grade_id: cellId,
+      locked: false,
+      schema_version: 3,
+    };
+    return md;
+  }
 }
 
 /**
@@ -163,4 +177,8 @@ export function convertNBGraderType(md: NBGraderMetadata, newType: GraderCellTyp
     md.grade = md.task = md.solution = false;
     delete md.points;
   }
+}
+
+export function isBasicGraderType(gct: GraderCellType): boolean {
+  return gct === "markdown" || gct === "python";
 }
