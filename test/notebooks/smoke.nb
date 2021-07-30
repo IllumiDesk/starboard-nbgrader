@@ -1,0 +1,56 @@
+---
+starboard:
+  plugins:
+    - src: /static/starboard-nbgrader/plugin.js
+      args:
+        mode: assignment-creator
+        jupyter:
+          serverSettings:
+            baseUrl: http://localhost:8888
+---
+# %%--- [grader]
+# properties: {}
+# id: smart-plymouth
+# nbgrader:
+#   grade: false
+#   grade_id: cell-6aca377eade36d42
+#   locked: true
+#   schema_version: 3
+#   solution: false
+#   task: false
+# starboard_grader:
+#   original_cell_type: markdown
+#   is_basic_cell: true
+# ---%%
+## Hello World!
+# %%--- [grader]
+# properties: {}
+# id: handed-stopping
+# nbgrader:
+#   grade: true
+#   grade_id: haiku-answer
+#   locked: false
+#   points: 1
+#   schema_version: 3
+#   solution: true
+#   task: false
+# starboard_grader:
+#   original_cell_type: markdown
+#   is_basic_cell: false
+# ---%%
+This is a cell worth 1 point
+# %%--- [grader]
+# properties: {}
+# id: cooperative-healthcare
+# nbgrader:
+#   grade: false
+#   grade_id: cell-ff14169315ad87d3
+#   locked: false
+#   schema_version: 3
+#   solution: true
+#   task: false
+# starboard_grader:
+#   original_cell_type: python
+#   is_basic_cell: false
+# ---%%
+print("Hello world!")

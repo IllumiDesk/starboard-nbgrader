@@ -28,6 +28,7 @@
     "prettier": "^2.2.1",
     "rimraf": "^3.0.2",
     "rollup-plugin-esbuild": "^4.2.3",
+    "starlit": "^0.1.17",
     "ts-jest": "^27.0.3",
     "typescript": "^4.2.3"
   },
@@ -35,6 +36,7 @@
     "build": "rollup -c && tsc",
     "start": "rollup -c --watch",
     "test": "jest",
+    "nbtest": "starlit nbtest test/notebooks --serve_static starboard-nbgrader=./dist",
     "format": "prettier -w src",
     "prepublishOnly": "rimraf dist && npm i && npm run build"
   },
